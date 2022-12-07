@@ -40,5 +40,3 @@ while true do
         System.Environment.Exit 0
     | _ ->
         sum <- sum + parsedNumber
-
-printfn "Hello from F#"
