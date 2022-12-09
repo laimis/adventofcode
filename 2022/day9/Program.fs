@@ -2,7 +2,19 @@
 let lines = File.ReadAllLines("input.txt")
 
 type Move = int*int*int*string
-type Position = int*int
+
+type Position = 
+    {row: int; col: int}
+    member this.apply (move: Move) =
+        let (rowAdj, colAdj, _, _) = move
+        let {row = row;  col = col} = this
+        {row = row + rowAdj; col = col + colAdj}
+    member this.subtract (other: Position) =
+        let {row = row;  col = col} = this
+        let {row = otherRow; col = otherCol} = other
+        (row - otherRow, col - otherCol)
+    static member create (row, col) = {row = row; col = col}
+
 type Rope = {
     Head: Position;
     One: Position;
@@ -34,55 +46,54 @@ let commands = lines |> List.ofArray |> List.map parseCommand
 // let's first figure out the sequence of coordinates that are zero based that the head will visit
 
 let rope = {
-    Head = Position(0, 0);
-    One = Position(0, 0);
-    Two = Position(0, 0);
-    Three = Position(0, 0);
-    Four = Position(0, 0);
-    Five = Position(0, 0);
-    Six = Position(0, 0);
-    Seven = Position(0, 0);
-    Eight = Position(0, 0);
-    Tail = Position(0, 0)
+    Head = Position.create(0, 0);
+    One = Position.create(0, 0);
+    Two = Position.create(0, 0);
+    Three = Position.create(0, 0);
+    Four = Position.create(0, 0);
+    Five = Position.create(0, 0);
+    Six = Position.create(0, 0);
+    Seven = Position.create(0, 0);
+    Eight = Position.create(0, 0);
+    Tail = Position.create(0, 0);
 }
 
 let calculateKnotPosition leadingKnot followingKnot =
-    let (leadingRow, leadingCol) = leadingKnot
-    let (followingRow, followingCol) = followingKnot
+    let {row = leadingRow;  col = leadingCol} = leadingKnot
+    let {row = followingRow; col = followingCol} = followingKnot
 
-    let rowDiff = leadingRow - followingRow
-    let colDiff = leadingCol - followingCol
+    let (rowDiff, colDiff) = leadingKnot.subtract followingKnot
 
     match (rowDiff,colDiff) with
     | (0, 0) -> followingKnot
     | (0,-1) -> followingKnot
-    | (0,-2) -> (leadingRow, followingCol - 1)
+    | (0,-2) -> Position.create(leadingRow, followingCol - 1)
     | (0, 1) -> followingKnot
-    | (0, 2) -> (leadingRow, followingCol + 1)
+    | (0, 2) -> Position.create(leadingRow, followingCol + 1)
     | (-1, 0) -> followingKnot
-    | (-2, 0) -> (followingRow - 1, leadingCol)
+    | (-2, 0) -> Position.create(followingRow - 1, leadingCol)
     | (1, 0) -> followingKnot
-    | (2, 0) -> (followingRow + 1, leadingCol)
+    | (2, 0) -> Position.create(followingRow + 1, leadingCol)
 
     // separated diagonally but not far enough
-    | (-1,-1) -> (followingRow, followingCol)
-    | (1, -1) -> (followingRow, followingCol)
-    | (-1, 1) -> (followingRow, followingCol)
-    | (1, 1) -> (followingRow, followingCol)
+    | (-1,-1) -> followingKnot
+    | (1, -1) -> followingKnot
+    | (-1, 1) -> followingKnot
+    | (1, 1) -> followingKnot
 
     // diagonals
-    | (2, -1) -> (followingRow + 1, leadingCol)
-    | (2,  1) -> (followingRow + 1, leadingCol)
-    | (1, -2) -> (leadingRow, followingCol - 1)
-    | (1,  2) -> (leadingRow, followingCol + 1)
-    | (-1, -2) -> (leadingRow, followingCol - 1)
-    | (-1,  2) -> (leadingRow, followingCol + 1)
-    | (-2, -1) -> (followingRow - 1, leadingCol)
-    | (-2,  1) -> (followingRow - 1, leadingCol)
-    | (2, -2) -> (followingRow + 1, followingCol - 1)
-    | (2,  2) -> (followingRow + 1, followingCol + 1)
-    | (-2, -2) -> (followingRow - 1, followingCol - 1)
-    | (-2,  2) -> (followingRow - 1, followingCol + 1)
+    | (2, -1) -> Position.create(followingRow + 1, leadingCol)
+    | (2,  1) -> Position.create(followingRow + 1, leadingCol)
+    | (1, -2) -> Position.create(leadingRow, followingCol - 1)
+    | (1,  2) -> Position.create(leadingRow, followingCol + 1)
+    | (-1, -2) -> Position.create(leadingRow, followingCol - 1)
+    | (-1,  2) -> Position.create(leadingRow, followingCol + 1)
+    | (-2, -1) -> Position.create(followingRow - 1, leadingCol)
+    | (-2,  1) -> Position.create(followingRow - 1, leadingCol)
+    | (2, -2) -> Position.create(followingRow + 1, followingCol - 1)
+    | (2,  2) -> Position.create(followingRow + 1, followingCol + 1)
+    | (-2, -2) -> Position.create(followingRow - 1, followingCol - 1)
+    | (-2,  2) -> Position.create(followingRow - 1, followingCol + 1)
 
     | _ -> failwith $"Invalid tail position: {rowDiff}, {colDiff}"
 
@@ -93,36 +104,35 @@ let rec stepExecution (acc: Rope list) move =
     if magnitude = 0 then
         acc
     else
-        let lastRope = acc |> List.last
+        let rope = acc |> List.last
 
-        let (headRow, headCol) = lastRope.Head
-        let newHead = Position(headRow + rowAdj, headCol + colAdj)
+        let newHead = rope.Head.apply move
         
-        let one = lastRope.One
+        let one = rope.One
         let newOne = calculateKnotPosition newHead one
 
-        let two = lastRope.Two
+        let two = rope.Two
         let newTwo = calculateKnotPosition newOne two
 
-        let three = lastRope.Three
+        let three = rope.Three
         let newThree = calculateKnotPosition newTwo three
 
-        let four = lastRope.Four
+        let four = rope.Four
         let newFour = calculateKnotPosition newThree four
 
-        let five = lastRope.Five
+        let five = rope.Five
         let newFive = calculateKnotPosition newFour five
 
-        let six = lastRope.Six
+        let six = rope.Six
         let newSix = calculateKnotPosition newFive six
 
-        let seven = lastRope.Seven
+        let seven = rope.Seven
         let newSeven = calculateKnotPosition newSix seven
 
-        let eight = lastRope.Eight
+        let eight = rope.Eight
         let newEight = calculateKnotPosition newSeven eight
 
-        let tail = lastRope.Tail
+        let tail = rope.Tail
         let newTail = calculateKnotPosition newEight tail
 
         let newMove = (rowAdj, colAdj, magnitude - 1, desc)
