@@ -74,7 +74,7 @@ module Types =
     type Rope =
         { Parts : Position list}
 
-        member this.generateRopeSequence moves =
+        member this.move moves =
             let rec stepExecution (acc: Rope list) move =
                 let {magnitude = magnitude} = move
 

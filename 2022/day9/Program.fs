@@ -16,7 +16,7 @@ let rope = knots |> Rope.create
 
 let ropes =
     commands
-    |> rope.generateRopeSequence
+    |> rope.move
 
 let tail rope =
     rope.Parts |> List.last
