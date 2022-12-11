@@ -35,22 +35,17 @@ let registerValueGenerator (acc: int list) (command: Command) =
 let registerSequence =
     input
     |> Array.map parseIntoInstruction
-    |> Array.fold registerValueGenerator []
+    |> Array.fold registerValueGenerator [1]
 
 printfn "Register sequence length: %d" registerSequence.Length
 // tricky thing here to not is that we look at the value of the register before the index cycle, as the value might have been different
 // at the start of the cycle vs the end (at the end addx finishes executing, for example)
-let takeOnlyEvery40thRegisterFrom20 (acc: int list, index) (_: int) =
+let takeOnlyEvery40thRegisterFrom20 (acc: int list, index) (register: int) =
     let toReturn =
         match index with
-        | 19 -> 
-            let valueToAdd = registerSequence[index - 1]
-            printfn "Adding %d with value %d" (index + 1) valueToAdd
-            (acc @ [valueToAdd], index + 1)
-        | _ when (index - 19) % 40 = 0 -> 
-            let valueToAdd = registerSequence[index - 1]
-            printfn "Adding %d with value %d" (index + 1) valueToAdd
-            (acc @ [valueToAdd], index + 1)
+        | _ when index = 19 || (index - 19) % 40 = 0 -> 
+            printfn "Adding %d with value %d" (index + 1) register
+            (acc @ [register], index + 1)
         | _ -> (acc, index + 1)
     
     toReturn
@@ -73,20 +68,47 @@ let sum =
     )
     |> List.sum
 
+// 13140
 printfn "Sum: %d" sum
 
 // go through each register in the sequence and draw a . or a # depending on the value
 // this is just to see the pattern in the sequence
 
-let drawRegister (acc: string list) (value: int) =
-    // let toAdd =
-    //     match value with
-    //     | 0 -> "."
-    //     | 1 -> "#"
-    //     | _ -> failwith "Unknown value"
-    printfn "%d" value
-    acc @ ["toAdd"]
+type RenderState =
+    {
+        Cycle: int
+        Screen: char list
+    }
 
-let registerDrawing =
+let drawRegister (state: RenderState) (register: int) =
+    let { Cycle = cycle; Screen = screen } = state
+
+    let cycleNumberToUse = cycle % 40
+
+    let positionBeingDrawn = cycleNumberToUse - 1
+
+    let minBoundary = register - 1
+    let maxBoundary = register + 1
+
+    let characterToDraw = 
+        match positionBeingDrawn with
+        | _ when positionBeingDrawn >= minBoundary && positionBeingDrawn <= maxBoundary -> '#'
+        | _ -> '.'
+
+    let newScreen = screen @ [characterToDraw]
+    let newScreenStr = new System.String(newScreen |> List.toArray)
+
+    // printfn $"Cycle: {cycleNumberToUse}, Register: {register}, Boundary: [{minBoundary},{maxBoundary}], Character: {characterToDraw}, screen: {newScreenStr}"
+    // System.Console.ReadKey() |> ignore
+
+    { state with Screen = newScreen; Cycle = state.Cycle + 1; }
+
+let render =
     registerSequence
-    |> List.fold drawRegister []
+    |> List.fold drawRegister { Cycle = 1; Screen = [] }
+
+render.Screen
+|> List.iteri (fun index character ->
+    if index % 40 = 0 then printfn ""
+    printf "%c" character
+)
