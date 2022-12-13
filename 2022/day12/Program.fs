@@ -5,10 +5,10 @@ let input = File.ReadAllLines "input.txt"
 
 type Point = { Row:int; Column:int; }
 
-let left point = { point with Column = point.Column - 1 }
-let right point = { point with Column = point.Column + 1 }
-let up point = { point with Row = point.Row - 1 }
-let down point = { point with Row = point.Row + 1 }
+let left point = ({ point with Column = point.Column - 1 }, '<')
+let right point = ({ point with Column = point.Column + 1 }, '>')
+let up point = ({ point with Row = point.Row - 1 }, '^')
+let down point = ({ point with Row = point.Row + 1 }, 'v')
 
 type Map = 
     {
@@ -42,21 +42,36 @@ type Path(points: Point list) =
     member this.Last = points |> List.last
     member this.Contains (point:Point) = points |> List.contains point
 
-let drawToConsole map (path:Path) =
+
+let mutable (shortestPath:Path option) = None
+let mutable (shortestGraphicalPath:char array option) = None
+let mutable counter =  0
+// let visisted = HashSet<Point>()
+
+let drawToConsole map (path:Path) (newGraphicalPath:char array) =
     System.Console.Clear()
     System.Console.SetCursorPosition(0,0)
     map.Grid
     |> Array.iteri (fun rowi value -> 
         value
         |> Array.iteri (fun coli gc -> 
-            let testPoint = { Row = rowi; Column = coli; }
-            if path.Points |> List.contains testPoint then
-                printf $"*"
-            else
-                printf $"{gc}"
+            printf $"{gc}"
         )
         printfn ""
     )
+
+    System.Console.ForegroundColor <- System.ConsoleColor.Red
+    path.Points
+    |> List.iteri (fun i p ->
+        System.Console.SetCursorPosition(p.Column, p.Row)
+        System.Console.Write($"{newGraphicalPath.[i]}")
+    )
+
+    System.Console.SetCursorPosition(0, map.Rows + 1)
+
+    System.Console.ResetColor()
+    // let shortestPathLength = shortestPath |> Option.map(fun p -> p.Length) |> Option.defaultValue -1
+    // System.Console.WriteLine($"Shortest path so far: {shortestPathLength}")
 
 
 let findPoint map (value:char) =
@@ -85,49 +100,62 @@ let boundaryCheck map p =
     
     isValid
 
-let mutable (shortestPath:Path option) = None
-
-let rec findPath (verbose:bool) (map:Map) (path:Path) (endPoint:Point) =
+let rec findPath (verbose:bool) (map:Map) (path:Path) (graphicalPath:char array)  (endPoint:Point) =
     
     // visited.Add startingPoint |> ignore
     // queue.Enqueue startingPoint
+    counter <- counter + 1
 
-    if verbose then
-        drawToConsole map path
-        System.Console.ReadLine() |> ignore
+    if verbose || counter % 500000 = 0 then
+        drawToConsole map path graphicalPath
+        if verbose then
+            System.Console.ReadLine() |> ignore
 
     let current_vertex = path.Last
+    let currentValue = map.ValueInt current_vertex
 
     if map.Value current_vertex = 'E' then
         printfn $"Found path to end at {current_vertex.Row}, {current_vertex.Column} with length of {path.Length}"
         shortestPath <- Some path
+        shortestGraphicalPath <- Some graphicalPath
         if verbose then
             System.Console.ReadLine() |> ignore
 
     let qualified_nodes = 
         [left current_vertex; right current_vertex; up current_vertex; down current_vertex]
-        |> List.filter(fun p -> p |> boundaryCheck map)
-        |> List.filter(fun p -> map.ValueInt p - map.ValueInt current_vertex <= 1)
-        |> List.filter(fun p -> not (path.Contains p))
-        |> List.sortBy(fun p -> manhattanDistance p endPoint)
+        |> List.filter(fun (p, _) -> p |> boundaryCheck map)
+        |> List.filter(fun (p, _) -> map.ValueInt p - currentValue >= -1)
+        |> List.filter(fun (p, _) -> not (path.Contains p))
+        |> List.sortBy(fun (p, _) -> manhattanDistance p endPoint)
 
-    for next_vertex in qualified_nodes do
+
+    if verbose then
+        System.Console.WriteLine($"Found {qualified_nodes.Length} qualified nodes")
+        qualified_nodes
+        |> List.iter(fun (p, _) -> System.Console.WriteLine($"  {p.Row}x{p.Column} {map.Value p} {manhattanDistance p endPoint}"))
+        System.Console.ReadLine() |> ignore
+
+    for (next_vertex, movement_character) in qualified_nodes do
             
-        let nextValue = map.ValueInt next_vertex
-        let currentValue = map.ValueInt current_vertex
+        // System.Console.WriteLine($"trying out {next_vertex.Row}x{next_vertex.Column} [{map.Value next_vertex}]")
+        // System.Console.ReadKey() |> ignore
+        let newPath = path.Append next_vertex
+        let newGraphicalPath = [|movement_character|] |> Array.append graphicalPath
 
-        if (nextValue - currentValue <= 1) then
-            // System.Console.WriteLine($"trying out {next_vertex.Row}x{next_vertex.Column} [{map.Value next_vertex}]")
-            // System.Console.ReadKey() |> ignore
-            let newPath = path.Append next_vertex
+        // only worth trying out new path if it's shorter than the current shortest path
+        if shortestPath.IsNone || newPath.Length < shortestPath.Value.Length then
+            // if not (visisted.Contains next_vertex) then
+                findPath verbose map newPath newGraphicalPath endPoint
+            // else
+            //     printfn $"Skipping path {newPath} because it's already been visited"
+            //     if verbose then
+            //         System.Console.ReadLine() |> ignore
+        else
+            printfn $"Skipping path {newPath.Length} because it's longer than the current shortest path {shortestPath.Value.Length}"
+            if verbose then
+                System.Console.ReadLine() |> ignore
 
-            // only worth trying out new path if it's shorter than the current shortest path
-            if shortestPath.IsNone || newPath.Length < shortestPath.Value.Length then
-                findPath verbose map newPath endPoint
-            else
-                printfn $"Skipping path {newPath.Length} because it's longer than the current shortest path {shortestPath.Value.Length}"
-                if verbose then
-                    System.Console.ReadLine() |> ignore
+    // visisted.Add(current_vertex) |> ignore
 
 let map = parseMap input
 
@@ -138,7 +166,7 @@ let endPoint = findPoint map 'E'
 
 let startingPath = Path([startingPoint])
 
-findPath true map startingPath endPoint
+findPath false map startingPath [|'S'|] endPoint
 
-drawToConsole map (shortestPath.Value)
+drawToConsole map (shortestPath.Value) (shortestGraphicalPath.Value)
 printfn $"Path length: {shortestPath.Value.Length}"
