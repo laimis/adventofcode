@@ -109,9 +109,9 @@ let drawToConsole map (path:Point list) (priorityQueue:PriorityQueue<Point list,
             )
             System.Console.SetCursorPosition(0, map.Rows + 1)
             System.Console.ResetColor()
-            System.Console.WriteLine($"Path length {path.Length}")
 
         let drawShortestPathStatus() =
+            System.Console.WriteLine($"Path length {path.Length}")
             let info =
                 match shortestPath with
                 | Some p -> $"Current shortest path of length {p.Length}"
@@ -153,7 +153,7 @@ let boundaryCheck map nextPoint currentPoint =
         false
     else
         let diff = (map.ValueInt nextPoint) - (map.ValueInt currentPoint)
-        diff <= 1
+        diff >= -1
 
 
 let map = parseMap input
@@ -236,16 +236,17 @@ let rec findPath (path:Point list) =
     
     shortestDistances[currentPoint] <- path.Length
 
-    if map.Value currentPoint = 'E' then
-        printfn $"Found path to end at {currentPoint.Row}, {currentPoint.Column} with length of {path.Length}"
-        shortestPath <- Some path
-        if verbose then
-            System.Console.ReadLine() |> ignore
+    if map.Value currentPoint = 'a' then
+        if shortestPath.IsNone || path.Length < shortestPath.Value.Length then
+            printfn $"Found path to end at {currentPoint.Row}, {currentPoint.Column} with length of {path.Length}"
+            shortestPath <- Some path
+            if verbose then
+                System.Console.ReadLine() |> ignore
 
     let qualified_nodes = 
         [left currentPoint; right currentPoint; up currentPoint; down currentPoint]
         |> List.filter(fun p -> (boundaryCheck map p currentPoint) && (List.contains p path |> not))
-        |> List.sortBy(fun p -> manhattanDistance p endPoint)
+        // |> List.sortBy(fun p -> manhattanDistance p endPoint)
 
     if verbose then
         System.Console.WriteLine($"Found {qualified_nodes.Length} qualified nodes")
@@ -259,19 +260,14 @@ let rec findPath (path:Point list) =
         
         let shortestDistance = shortestDistances.GetValueOrDefault(nextPoint, System.Int32.MaxValue)
         if shortestDistance > newPath.Length then
-            // // only worth trying out new path if it's shorter than the current shortest path
-            // if shortestPath.IsNone || newPath.Length < shortestPath.Value.Length then
-                findPath newPath
-            // else
-            //     printfn $"Skipping path {newPath.Length} because it's longer than the current shortest path {shortestPath.Value.Length}"
-            //     if verbose then
-            //         System.Console.ReadLine() |> ignore
+            findPath newPath
         else
             if verbose then
                 printfn $"Skipping path because it's longer than the current shortest path {shortestDistance}"
                 System.Console.ReadLine() |> ignore
 
-let startingPoint = findPoint map 'S'
+// let startingPoint = findPoint map 'S'
+let startingPoint = findPoint map 'E'
 printfn $"Starting at {startingPoint.Row}, {startingPoint.Column}"
 let startingPath = [startingPoint]
 
