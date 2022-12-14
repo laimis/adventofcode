@@ -81,7 +81,7 @@ let getColorForCharacter character =
     color
         
         
-let drawToConsole map (path:Point list) (priorityQueue:PriorityQueue<Point list, int>) (shortestPath:Point list option) =
+let drawToConsole map (path:Point list) (priorityQueue:PriorityQueue<Point list, int> option) (shortestPath:Point list option) =
     if System.Console.IsOutputRedirected then
         ()
     else
@@ -118,7 +118,10 @@ let drawToConsole map (path:Point list) (priorityQueue:PriorityQueue<Point list,
                 | None -> "No shortest path has been found yet"
 
             System.Console.WriteLine($"{info}")
-            System.Console.WriteLine($"Priority queue length {priorityQueue.Count}")
+
+            match priorityQueue with
+            | Some pq -> System.Console.WriteLine($"Priority queue length {pq.Count}")
+            | None -> ()
 
         // drawGrid()
         drawPath()
@@ -141,32 +144,29 @@ let findPoint map (value:char) =
 let manhattanDistance (p1:Point) (p2:Point) =
     abs (p1.Row - p2.Row) + abs (p1.Column - p2.Column)
 
-let boundaryCheck map p =
+let boundaryCheck map nextPoint currentPoint =
     let isValid =
-        p.Row >= 0 && p.Row < map.Rows &&
-        p.Column >= 0 && p.Column < map.Columns
+        nextPoint.Row >= 0 && nextPoint.Row < map.Rows &&
+        nextPoint.Column >= 0 && nextPoint.Column < map.Columns
     
-    isValid
+    if not isValid then
+        false
+    else
+        let diff = (map.ValueInt nextPoint) - (map.ValueInt currentPoint)
+        diff <= 1
 
 
 let map = parseMap input
 
-let priorityQueue = new PriorityQueue<Point list, int>()
-
 let mutable (shortestPath:Point list option) = None
 let mutable counter =  0
-let startingPoint = findPoint map 'S'
-
-printfn $"Starting at {startingPoint.Row}, {startingPoint.Column}"
 
 let endPoint = findPoint map 'E'
-
-let startingPath = [startingPoint]
-
 let shortestDistances = new Dictionary<Point, int>()
 
-let findPathNotRecursive() =
+let findPathNotRecursive startingPath =
 
+    let priorityQueue = new PriorityQueue<Point list, int>()
     priorityQueue.Enqueue(startingPath, startingPath.Length)
 
     while priorityQueue.Count > 0 do
@@ -181,7 +181,7 @@ let findPathNotRecursive() =
             printfn $"Examining {currentPoint.Row}x{currentPoint.Column} with value {currentValue}"
 
         if verbose || counter % 1000 = 0 then
-            drawToConsole map currentPath priorityQueue shortestPath
+            drawToConsole map currentPath (Some priorityQueue) shortestPath
             if verbose then
                 System.Console.ReadLine() |> ignore
 
@@ -195,9 +195,7 @@ let findPathNotRecursive() =
 
         let qualifiedNodes = 
             [left currentPoint; right currentPoint; up currentPoint; down currentPoint]
-            |> List.filter(fun p -> p |> boundaryCheck map)
-            |> List.filter(fun p -> map.ValueInt p - currentValue <= 1)
-            |> List.filter(fun p -> List.contains p currentPath |> not)
+            |> List.filter(fun p -> (p |> boundaryCheck map currentPoint) && (List.contains p currentPath |> not))
 
         if verbose then
             System.Console.WriteLine($"Found {qualifiedNodes.Length} qualified nodes")
@@ -227,7 +225,7 @@ let rec findPath (path:Point list) =
     counter <- counter + 1
 
     if verbose || counter % 1000 = 0 then
-        drawToConsole map path priorityQueue shortestPath
+        drawToConsole map path None shortestPath
         // if verbose then
         //     System.Console.ReadLine() |> ignore
 
@@ -235,8 +233,7 @@ let rec findPath (path:Point list) =
     //     System.IO.File.WriteAllText("counter.txt", counter.ToString())
 
     let current_vertex = path[path.Length - 1]
-    let currentValue = map.ValueInt current_vertex
-
+    
     shortestDistances[current_vertex] <- path.Length
 
     if map.Value current_vertex = 'E' then
@@ -247,9 +244,7 @@ let rec findPath (path:Point list) =
 
     let qualified_nodes = 
         [left current_vertex; right current_vertex; up current_vertex; down current_vertex]
-        |> List.filter(fun p -> p |> boundaryCheck map)
-        |> List.filter(fun p -> map.ValueInt p - currentValue <= 1)
-        |> List.filter(fun p -> List.contains p path |> not)
+        |> List.filter(fun p -> (boundaryCheck map p current_vertex) && (List.contains p path |> not))
         // |> List.sortBy(fun p -> manhattanDistance p endPoint)
 
     if verbose then
@@ -276,16 +271,20 @@ let rec findPath (path:Point list) =
                 printfn $"Skipping path because it's longer than the current shortest path {shortestDistance}"
                 System.Console.ReadLine() |> ignore
 
-drawToConsole map startingPath priorityQueue shortestPath
+let startingPoint = findPoint map 'S'
+printfn $"Starting at {startingPoint.Row}, {startingPoint.Column}"
+let startingPath = [startingPoint]
+
+drawToConsole map startingPath None shortestPath
 System.Console.ReadLine() |> ignore
 
 
 findPath startingPath
 
-// findPathNotRecursive()
+// findPathNotRecursive startingPath
 
 match shortestPath with
 | None -> printfn $"No path found"
 | Some s ->
-    drawToConsole map s priorityQueue shortestPath
-    printfn $"Path length: {s.Length}"
+    drawToConsole map s None shortestPath
+    printfn $"Path length: {s.Length - 1}"
