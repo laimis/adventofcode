@@ -245,7 +245,7 @@ let rec findPath (path:Point list) =
     let qualified_nodes = 
         [left current_vertex; right current_vertex; up current_vertex; down current_vertex]
         |> List.filter(fun p -> (boundaryCheck map p current_vertex) && (List.contains p path |> not))
-        // |> List.sortBy(fun p -> manhattanDistance p endPoint)
+        |> List.sortBy(fun p -> manhattanDistance p endPoint)
 
     if verbose then
         System.Console.WriteLine($"Found {qualified_nodes.Length} qualified nodes")
