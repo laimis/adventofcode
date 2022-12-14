@@ -80,29 +80,35 @@ open System.Collections.Generic
         color
             
             
-    let drawToConsole map (path:Path) (newGraphicalPath:char array) =
+    let drawToConsole map (path:Path) =
         if System.Console.IsOutputRedirected then
             ()
         else
             System.Console.Clear()
             System.Console.SetCursorPosition(0,0)
-            map.Grid
-            |> Array.iteri (fun rowi value -> 
-                value
-                |> Array.iteri (fun coli gc -> 
-                    let color = getColorForCharacter gc
-                    System.Console.ForegroundColor <- color
-                    printf $"{gc}"
+            
+            let drawGrid() =
+                map.Grid
+                |> Array.iteri (fun rowi value -> 
+                    value
+                    |> Array.iteri (fun coli gc -> 
+                        let color = getColorForCharacter gc
+                        System.Console.ForegroundColor <- color
+                        printf $"{gc}"
+                    )
+                    printfn ""
                 )
-                printfn ""
-            )
 
-            System.Console.ForegroundColor <- System.ConsoleColor.Red
-            path.Points
-            |> List.iteri (fun i p ->
-                System.Console.SetCursorPosition(p.Column, p.Row)
-                System.Console.Write($"{newGraphicalPath.[i]}")
-            )
+            let drawPath() =
+                System.Console.ForegroundColor <- System.ConsoleColor.Red
+                path.Points
+                |> List.iteri (fun i p ->
+                    System.Console.SetCursorPosition(p.Column, p.Row)
+                    System.Console.Write($"*")
+                )
+
+            // drawGrid()
+            drawPath()
 
             System.Console.SetCursorPosition(0, map.Rows + 1)
             System.Console.ResetColor()
@@ -131,60 +137,6 @@ open System.Collections.Generic
         
         isValid
 
-    let rec findPath (verbose:bool) (map:Map) (path:Path) (graphicalPath:char array) (shortestDistances:Dictionary<Point, int>) (endPoint:Point) =
-        
-        counter <- counter + 1
-
-        if verbose || counter % 1000 = 0 then
-            drawToConsole map path graphicalPath
-            // if verbose then
-            //     System.Console.ReadLine() |> ignore
-
-        let current_vertex = path.Last
-        let currentValue = map.ValueInt current_vertex
-
-        shortestDistances[current_vertex] <- path.Length
-
-        if map.Value current_vertex = 'E' then
-            printfn $"Found path to end at {current_vertex.Row}, {current_vertex.Column} with length of {path.Length}"
-            shortestPath <- Some path
-            shortestGraphicalPath <- Some graphicalPath
-            if verbose then
-                System.Console.ReadLine() |> ignore
-
-        let qualified_nodes = 
-            [left current_vertex; right current_vertex; up current_vertex; down current_vertex]
-            |> List.filter(fun (p, _) -> p |> boundaryCheck map)
-            |> List.filter(fun (p, _) -> map.ValueInt p - currentValue <= 1)
-            |> List.filter(fun (p, _) -> not (path.Contains p))
-            |> List.sortBy(fun (p, _) -> manhattanDistance p endPoint)
-
-
-        if verbose then
-            System.Console.WriteLine($"Found {qualified_nodes.Length} qualified nodes")
-            qualified_nodes
-            |> List.iter(fun (p, _) -> System.Console.WriteLine($"  {p.Row}x{p.Column} {map.Value p} {manhattanDistance p endPoint}"))
-            System.Console.ReadLine() |> ignore
-
-        for (next_vertex, movement_character) in qualified_nodes do
-                
-            let newPath = path.Append next_vertex
-            let newGraphicalPath = [|movement_character|] |> Array.append graphicalPath
-
-            let shortestDistance = shortestDistances.GetValueOrDefault(next_vertex, System.Int32.MaxValue)
-            if shortestDistance > newPath.Length then
-                // only worth trying out new path if it's shorter than the current shortest path
-                if shortestPath.IsNone || newPath.Length < shortestPath.Value.Length then
-                    findPath verbose map newPath newGraphicalPath shortestDistances endPoint
-                else
-                    printfn $"Skipping path {newPath.Length} because it's longer than the current shortest path {shortestPath.Value.Length}"
-                    if verbose then
-                        System.Console.ReadLine() |> ignore
-            else
-                if verbose then
-                    printfn $"Skipping path because it's longer than the current shortest path {shortestDistance}"
-                    System.Console.ReadLine() |> ignore
-
     let findShortestPath verbose (input:string array) =
         let map = parseMap input
 
@@ -198,18 +150,71 @@ open System.Collections.Generic
 
         let shortestDistances = new Dictionary<Point, int>()
 
-        drawToConsole map startingPath [|'S'|]
-        System.Console.ReadLine() |> ignore
+        drawToConsole map startingPath
+        if verbose then
+            System.Console.ReadLine() |> ignore
 
-        try
-            findPath verbose map startingPath [|'S'|] shortestDistances endPoint
-        with
-            | :? System.Exception as e ->
-                printfn $"Exception at {counter} iterations"
-                printfn $"Shortest path found so far: {shortestPath.Value.Length}"
-                printfn $"Exception: {e.Message}"
+        let rec findPath (verbose:bool) (map:Map) (path:Path) (shortestDistances:Dictionary<Point, int>) (endPoint:Point) =
+        
+            counter <- counter + 1
 
-        drawToConsole map (shortestPath.Value) (shortestGraphicalPath.Value)
-        printfn $"Path length: {shortestPath.Value.Length}"
+            if verbose || counter % 1000 = 0 then
+                drawToConsole map path
+                // if verbose then
+                //     System.Console.ReadLine() |> ignore
+
+            if counter % 1000 = 0 then
+                System.IO.File.WriteAllText("counter.txt", counter.ToString())
+
+            let current_vertex = path.Last
+            let currentValue = map.ValueInt current_vertex
+
+            shortestDistances[current_vertex] <- path.Length
+
+            if map.Value current_vertex = 'E' then
+                printfn $"Found path to end at {current_vertex.Row}, {current_vertex.Column} with length of {path.Length}"
+                shortestPath <- Some path
+                if verbose then
+                    System.Console.ReadLine() |> ignore
+
+            let qualified_nodes = 
+                [left current_vertex; right current_vertex; up current_vertex; down current_vertex]
+                |> List.filter(fun (p, _) -> p |> boundaryCheck map)
+                |> List.filter(fun (p, _) -> map.ValueInt p - currentValue <= 1)
+                |> List.filter(fun (p, _) -> not (path.Contains p))
+                |> List.sortBy(fun (p, _) -> manhattanDistance p endPoint)
+
+
+            if verbose then
+                System.Console.WriteLine($"Found {qualified_nodes.Length} qualified nodes")
+                qualified_nodes
+                |> List.iter(fun (p, _) -> System.Console.WriteLine($"  {p.Row}x{p.Column} {map.Value p} {manhattanDistance p endPoint}"))
+                System.Console.ReadLine() |> ignore
+
+            for (next_vertex, movement_character) in qualified_nodes do
+                    
+                let newPath = path.Append next_vertex
+                
+                let shortestDistance = shortestDistances.GetValueOrDefault(next_vertex, System.Int32.MaxValue)
+                if shortestDistance > newPath.Length then
+                    // only worth trying out new path if it's shorter than the current shortest path
+                    if shortestPath.IsNone || newPath.Length < shortestPath.Value.Length then
+                        findPath verbose map newPath shortestDistances endPoint
+                    else
+                        printfn $"Skipping path {newPath.Length} because it's longer than the current shortest path {shortestPath.Value.Length}"
+                        if verbose then
+                            System.Console.ReadLine() |> ignore
+                else
+                    if verbose then
+                        printfn $"Skipping path because it's longer than the current shortest path {shortestDistance}"
+                        System.Console.ReadLine() |> ignore
+        
+        findPath verbose map startingPath shortestDistances endPoint
+
+        match shortestPath with
+        | None -> printfn $"No path found"
+        | Some shortestPath ->
+            drawToConsole map (shortestPath)
+            printfn $"Path length: {shortestPath.Length}"
 
         shortestPath.Value
