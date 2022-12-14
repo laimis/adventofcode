@@ -232,19 +232,19 @@ let rec findPath (path:Point list) =
     // if counter % 1000 = 0 then
     //     System.IO.File.WriteAllText("counter.txt", counter.ToString())
 
-    let current_vertex = path[path.Length - 1]
+    let currentPoint = path[path.Length - 1]
     
-    shortestDistances[current_vertex] <- path.Length
+    shortestDistances[currentPoint] <- path.Length
 
-    if map.Value current_vertex = 'E' then
-        printfn $"Found path to end at {current_vertex.Row}, {current_vertex.Column} with length of {path.Length}"
+    if map.Value currentPoint = 'E' then
+        printfn $"Found path to end at {currentPoint.Row}, {currentPoint.Column} with length of {path.Length}"
         shortestPath <- Some path
         if verbose then
             System.Console.ReadLine() |> ignore
 
     let qualified_nodes = 
-        [left current_vertex; right current_vertex; up current_vertex; down current_vertex]
-        |> List.filter(fun p -> (boundaryCheck map p current_vertex) && (List.contains p path |> not))
+        [left currentPoint; right currentPoint; up currentPoint; down currentPoint]
+        |> List.filter(fun p -> (boundaryCheck map p currentPoint) && (List.contains p path |> not))
         |> List.sortBy(fun p -> manhattanDistance p endPoint)
 
     if verbose then
@@ -253,11 +253,11 @@ let rec findPath (path:Point list) =
         |> List.iter(fun p -> System.Console.WriteLine($"  {p.Row}x{p.Column} {map.Value p} {manhattanDistance p endPoint}"))
         System.Console.ReadLine() |> ignore
 
-    for next_vertex in qualified_nodes do
+    for nextPoint in qualified_nodes do
             
-        let newPath = path @ [next_vertex]
+        let newPath = path @ [nextPoint]
         
-        let shortestDistance = shortestDistances.GetValueOrDefault(next_vertex, System.Int32.MaxValue)
+        let shortestDistance = shortestDistances.GetValueOrDefault(nextPoint, System.Int32.MaxValue)
         if shortestDistance > newPath.Length then
             // // only worth trying out new path if it's shorter than the current shortest path
             // if shortestPath.IsNone || newPath.Length < shortestPath.Value.Length then
