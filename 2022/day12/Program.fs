@@ -187,7 +187,7 @@ let findPathNotRecursive() =
 
         shortestDistances[currentPoint] <- currentPath.Length
 
-        if map.Value currentPoint = 'E' then
+        if currentPoint = endPoint then
             printfn $"Found path to end at {currentPoint.Row}, {currentPoint.Column} with length of {currentPath.Length}"
             shortestPath <- Some currentPath
             if verbose then
@@ -231,8 +231,8 @@ let rec findPath (path:Point list) =
         // if verbose then
         //     System.Console.ReadLine() |> ignore
 
-    if counter % 1000 = 0 then
-        System.IO.File.WriteAllText("counter.txt", counter.ToString())
+    // if counter % 1000 = 0 then
+    //     System.IO.File.WriteAllText("counter.txt", counter.ToString())
 
     let current_vertex = path[path.Length - 1]
     let currentValue = map.ValueInt current_vertex
