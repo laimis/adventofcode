@@ -3,149 +3,179 @@ let input = File.ReadAllLines("input.txt")
 
 
 type PacketData =
-    | ListOfPacketData of PacketData ResizeArray
+    | PacketDataList of ResizeArray<PacketData>
     | Int of int
 
 let isNumber (input:char) =
     System.Char.IsNumber(input)
 
+let verbose = false
 let outputLineWithIndent message level =
-    for _ in [0..level] do
-        printf " "
-    printfn $"{message}"
+    if verbose then
+        for _ in [0..level] do
+            printf " "
+        
+        printfn $"{message}"
+
+let outputAndAskToEnter message level =
+    outputLineWithIndent message level
+    if verbose then
+        System.Console.ReadLine() |> ignore
 
 let parse (toParse:string) =
     
-    // outputLineWithIndent toParse 0
-    // System.Console.ReadLine() |> ignore
-    let rec parseInternal (data:PacketData) input level =
+    let findExpressionEnd (input:string) =
+        
+        let fold state (c:char) =
+    
+            let (found:bool,bracketCounter:int,pos:int) = state
+            match found with
+            | true -> (found, bracketCounter,pos)
+            | false ->
+                let newPos = pos + 1
+                match c with
+                | '[' -> (false, bracketCounter + 1, newPos)
+                | ']' ->
+                    match bracketCounter - 1 with
+                    | 0 -> (true, 0, newPos)
+                    | _ -> (false, bracketCounter - 1, newPos)    
+                | _ -> (false, bracketCounter, newPos)
+
+        let initialState = (false, 0, 0)
+
+        let (found, _, position) = input.ToCharArray() |> Array.fold fold initialState
+
+        if found |> not then
+            failwith "unable to find string"
+        position
+
+    let rec parseInternal (input:string) (currentList:PacketData) : PacketData =
+
         match input with
-        | "" -> data
         
+        | "" -> currentList
+
         | txt when txt.StartsWith("[") ->
-            match data with
-            | ListOfPacketData list -> 
-                let newData = (ListOfPacketData (ResizeArray<PacketData>()))
-                list.Add(newData)
-                parseInternal newData (input.Substring(1)) (level+1)
-            | _ -> failwith "Unexpected data type"
-        
-        | txt when txt.StartsWith(",") ->
-            parseInternal data (txt.Substring(1)) (level + 1)
-        
+            let ending = findExpressionEnd txt
+            let expression = txt.Substring(1, ending - 2)
+
+            match currentList with
+            | Int _ -> failwith "unexpected int type for [ start"
+            | PacketDataList list -> 
+
+                let newList = (PacketDataList (new ResizeArray<PacketData>()))
+                list.Add(newList)
+                parseInternal expression newList |> ignore
+                parseInternal (input.Substring(ending)) currentList
+
         | txt when txt[0] |> isNumber ->
             let rec readNumber index (numberString:string) (finalString:string) =
-                let c = numberString[index]
-                if isNumber c then
-                    readNumber (index + 1) numberString (finalString + c.ToString())
-                else
+                if index = numberString.Length then
                     finalString
+                else
+                    let c = numberString[index]
+                    if isNumber c then
+                        readNumber (index + 1) numberString (finalString + c.ToString())
+                    else
+                        finalString
             
             let numberString = readNumber 0 txt ""
 
             let number = int numberString
 
-            match data with
-            | ListOfPacketData list ->
+            match currentList with
+            | PacketDataList list ->
                 let number = Int(number)
                 list.Add(number)
-                parseInternal data (input.Substring(numberString.Length)) (level + 1)
+                let newInput = input.Substring(numberString.Length)
+                parseInternal newInput currentList
             | _ -> failwith "Unexpected data type for number parsing path"
 
-        | txt when txt.StartsWith("]") ->
-            parseInternal data (txt.Substring(1)) (level + 1)
+        | txt when txt[0] = ',' ->
+            parseInternal (txt.Substring(1)) currentList
 
         | _ -> failwith $"Unexpected string sequence {input}"
 
-    let resultingList = (ListOfPacketData (ResizeArray<PacketData>()))
-
-    parseInternal resultingList toParse 0 |> ignore
-
-    resultingList
+    let list = (PacketDataList (new ResizeArray<PacketData>()))
+    parseInternal toParse list |> ignore
+    list
 
 
 let convertToString (data:PacketData) =
     
-    let rec convertToStringInternal (currentData:PacketData) (str:System.Text.StringBuilder) =
-        match currentData with
-        | ListOfPacketData list ->
-            if list.Count = 0 then
-                str
-            else
-                let subBuilder = new System.Text.StringBuilder()
-                subBuilder.Append("[") |> ignore
+    let rec printRec item str =
+        match item with
+        | Int n -> $"{str}{n}"
+        | PacketDataList list -> 
+            let exprList =
                 list
-                    |> Seq.iteri (fun subI subValue ->
-                        match subValue with
-                        | ListOfPacketData subList ->
-                            let subData = ListOfPacketData subList
-                            convertToStringInternal subData subBuilder |> ignore
-                        | Int number -> 
-                            subBuilder.Append(number.ToString()) |> ignore
-                            if subI < list.Count - 1 then
-                                subBuilder.Append(",") |> ignore
-                    )
-                subBuilder.Append("]") |> ignore
-                str.Append(subBuilder.ToString()) |> ignore
-                str
-        | Int number ->
-            str.Append(number.ToString())
+                |> Seq.map (fun item ->
+                    match item with
+                    | Int n -> printRec (Int n) ""
+                    | PacketDataList l -> printRec (PacketDataList l) ""
+                )
+                |> List.ofSeq
+                
+            let expr =
+                match exprList with
+                | [] -> ""
+                | _ -> exprList |> List.reduce (fun s1 s2 -> $"{s1},{s2}")
+            
+            $"{str}[{expr}]"
 
+    printRec data ""
 
-    let builder = new System.Text.StringBuilder()
-    convertToStringInternal data builder |> ignore
-    builder.ToString()
+let verifyPackets (left:PacketData) (right:PacketData) : int =
 
-let verifyPackets (left:PacketData) (right:PacketData) =
-
-    let outputAndAskToEnter message level =
-        outputLineWithIndent message level
-        System.Console.ReadLine() |> ignore
-
-    let rec verifyPacketsInternal left right level =
+    let rec verifyPacketsInternal left right level : int =
         let leftStr = convertToString left
         let rightStr = convertToString right
 
         outputAndAskToEnter $"Comparing {leftStr} vs {rightStr}" level
         
         match (left, right) with
-        | (ListOfPacketData leftList, ListOfPacketData rightList) ->
-            
-            outputAndAskToEnter "chose list vs list" level
+        | (PacketDataList leftList, PacketDataList rightList) ->
 
-            let zip = Seq.zip leftList rightList
-            let listComparison =
-                zip |> Seq.forall (fun (l, r) -> verifyPacketsInternal l r (level+1))
+            if leftList.Count = 0 && rightList.Count = 0 then
+                0
+            elif leftList.Count = 0 && rightList.Count > 0 then
+                -1
+            elif leftList.Count > 0 && rightList.Count = 0 then
+                1
+            else
+                let leftFirst = leftList[0]
+                let rightFirst = rightList[0]
 
-            // list checked out, now make sure the left one was the same or shorter length than right
-            let listComparisonResult =
-                match listComparison with
-                | true -> leftList.Count <= rightList.Count
-                | false -> false
+                match verifyPacketsInternal leftFirst rightFirst (level + 1) with
+                | 0 -> 
+                    let leftRemainingItems = leftList |> Seq.skip 1
+                    let remainderL = (PacketDataList (ResizeArray<PacketData>(leftRemainingItems)))
 
-            outputAndAskToEnter $"result is {listComparisonResult}" level
-            
-            listComparisonResult
+                    let rightRemainingItems = rightList |> Seq.skip 1
+                    let remainderR = (PacketDataList (ResizeArray<PacketData>(rightRemainingItems)))
 
-        | (ListOfPacketData leftList, Int right) ->
+                    verifyPacketsInternal remainderL remainderR (level + 1)
+                | cmp -> cmp
+
+        | (PacketDataList leftList, Int right) ->
             let rightList = ResizeArray<PacketData>()
             rightList.Add(Int(right))
-            verifyPacketsInternal (ListOfPacketData leftList) (ListOfPacketData rightList) (level+1)
+            verifyPacketsInternal (PacketDataList leftList) (PacketDataList rightList) (level+1)
 
-        | (Int left, ListOfPacketData rightList) ->
+        | (Int left, PacketDataList rightList) ->
             let leftList = ResizeArray<PacketData>()
             leftList.Add(Int(left))
-            verifyPacketsInternal (ListOfPacketData leftList) (ListOfPacketData rightList) (level + 1)
+            verifyPacketsInternal (PacketDataList leftList) (PacketDataList rightList) (level + 1)
 
         | (Int left, Int right) ->
-            left <= right
+            compare left right
 
     let verifyResult = verifyPacketsInternal left right 0
-    printfn $"result: {verifyResult}"
-    System.Console.ReadLine() |> ignore
+    outputAndAskToEnter $"result: {verifyResult}" 0
     verifyResult
 
-System.Console.Clear()
+if System.Console.IsOutputRedirected |> not then
+    System.Console.Clear()
 
 let sum =
     input
@@ -157,14 +187,17 @@ let sum =
         ( leftParsed, rightParsed )
     )
     |> Seq.map (fun (left, right) ->
-        verifyPackets left right
+        let result = verifyPackets left right
+        printfn $"{result}"
+        result
     )
     |> Seq.indexed
-    |> Seq.map (fun (index, passed) -> 
-        match passed with
-        | true -> index + 1
-        | false -> 0
+    |> Seq.map (fun (index, verifyResult) -> 
+        if verifyResult < 0
+            then index + 1
+        else
+            0
     )
     |> Seq.sum
 
-printfn "Sum: %i" sum
+printfn $"Sum: {sum}"
