@@ -125,7 +125,7 @@ let convertToString (data:PacketData) =
 
     printRec data ""
 
-let verifyPackets (left:PacketData) (right:PacketData) : int =
+let comparer (left:PacketData) (right:PacketData) : int =
 
     let rec verifyPacketsInternal left right level : int =
         let leftStr = convertToString left
@@ -187,8 +187,8 @@ let sum =
         ( leftParsed, rightParsed )
     )
     |> Seq.map (fun (left, right) ->
-        let result = verifyPackets left right
-        printfn $"{result}"
+        let result = comparer left right
+        printfn $"{convertToString left} vs {convertToString right}: {result}"
         result
     )
     |> Seq.indexed
@@ -201,3 +201,31 @@ let sum =
     |> Seq.sum
 
 printfn $"Sum: {sum}"
+
+// part two, did not understand the exact requirements, but it seems like it's about sorting the packets, then finding index of the market pakets
+
+
+let packets =
+    input
+    |> Seq.chunkBySize 3
+    |> Seq.map (fun arr -> (arr[0], arr[1]))
+    |> Seq.collect (fun (l,r) ->
+        [
+            parse l
+            parse r        
+        ]
+    )
+    |> Seq.append [(parse "[[2]]"); parse "[[6]]"]
+    |> Seq.sortWith comparer
+    |> Seq.map convertToString
+    |> Seq.indexed
+    |> Seq.map (fun (index,string) ->
+        match string with
+        | "[[[2]]]" -> index + 1
+        | "[[[6]]]" -> index + 1
+        | _ -> 0
+    )
+    |> Seq.filter (fun n -> n = 0 |> not)
+    |> Seq.fold (*) 1
+
+printfn $"Product {packets}"
