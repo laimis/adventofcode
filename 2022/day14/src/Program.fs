@@ -12,6 +12,13 @@ module Day14 =
         finish: Point
     }
 
+    type Board = {
+        stringForm: string
+        width: int
+        height: int
+        minX: int
+    }
+
     let parsePoint (input:string) =
         let parts = input.Split(',')
         match parts with
@@ -54,7 +61,7 @@ module Day14 =
         |> Array.distinct
 
     let findHeight (points:Point array) =
-        (points |> Array.maxBy (fun p -> p.y)).y
+        (points |> Array.maxBy (fun p -> p.y)).y + 1
 
     let findWidth (points:Point array) =
         (
@@ -62,7 +69,7 @@ module Day14 =
             (points |> Array.maxBy (fun p -> p.x)).x
         )
 
-    let generateString (points:Point array) =
+    let generateBoard (points:Point array) =
         let height = points |> findHeight
         let (minx, maxx) = points |> findWidth
 
@@ -70,10 +77,10 @@ module Day14 =
 
         let str =
             String.init
-                (width * height + height + 1)
+                (width * (height-1) + height)
                 (fun index ->
                     
-                    let row = index / (height + 1)
+                    let row = index / (height)
                     let column = index - row * width
 
                     let candidatePoint = {x = minx + column; y = row}
@@ -90,12 +97,55 @@ module Day14 =
             |> Seq.chunkBySize width
             |> Seq.map (fun c -> System.String(c))
 
-        String.concat "" rows
+        let stringForm = String.concat "" rows
+        {
+            stringForm = stringForm;
+            height = height;
+            width = width;
+            minX = minx
+        }
+
+    let convertToStringPosition board point =
+        point.y * board.width + (point.x - board.minX)
+
+    let renderNicely board =
+        board.stringForm
+            |> Seq.chunkBySize board.width
+            |> Seq.map (fun c -> System.String(c))
+            |> Seq.iter (fun s -> System.Console.WriteLine(s))
 
     let points =
         System.IO.File.ReadAllText("input.txt")
         |> parseToDistinctPoints
 
-    System.Console.WriteLine(points |> generateString)
+    let dropSand (board:Board) =
+        let createNewBoardWithSandPebble board position =
+            let arr = board.stringForm.ToCharArray()
+            arr[position] <- 'o'
+            let newForm = System.String(arr)
+            { board with stringForm = newForm }
 
+        let rec dropSandRecursive currentBoard point =
+            
+            let newPoint = {point with y = point.y + 1}
+            let newPointPosition = convertToStringPosition currentBoard newPoint
+            let c = currentBoard.stringForm[newPointPosition]
+            match c with 
+            | '.' -> dropSandRecursive (createNewBoardWithSandPebble currentBoard newPointPosition) newPoint
+            | _ -> currentBoard
+
+        let start = {x = 500; y = 0}
+        dropSandRecursive board start
+        
+        // let positionInString = convertToStringPosition board start
+        // arr[positionInString] <- 'o'
+        // let newForm = System.String(arr)
+        // { board with stringForm = newForm }
+
+    let (minx, maxx) = points |> findWidth
+    let width = maxx - minx + 1
+    let board = points |> generateBoard
+
+    System.Console.WriteLine(board.stringForm)
     
+    board |> dropSand |> renderNicely

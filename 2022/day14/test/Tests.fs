@@ -79,7 +79,7 @@ let ``Height discovery works`` () =
 
     let height = _sampleLines |> parseToDistinctPoints |> findHeight
 
-    Assert.Equal(9, height)
+    Assert.Equal(10, height)
 
 [<Fact>]
 let ``Width range discovery works`` () =
@@ -92,8 +92,17 @@ let ``Width range discovery works`` () =
 [<Fact>]
 let ``Render works`` () =
 
-    let output = _sampleLines |> parseToDistinctPoints |> generateString
+    let board = _sampleLines |> parseToDistinctPoints |> generateBoard
 
     let expected = @"............................................#...##....#...#...###...#.........#.........#.#########."
 
-    Assert.Equal(expected, output)
+    Assert.Equal(expected, board.stringForm)
+    Assert.Equal(10, board.width)
+    Assert.Equal(10, board.height)
+
+[<Fact>]
+let ``Drop sand, renders sand as o`` () =
+
+    let board = _sampleLines |> parseToDistinctPoints |> generateBoard
+
+    Assert.Equal(board.height, 10)
