@@ -106,11 +106,11 @@ let ``empty board point checks`` () =
     let board = _sampleLines |> parseToDistinctPoints |> generateBoard false
     let point = {x = 494; y = 9}
 
-    Assert.False(point |> boardPointEmpty board)
+    Assert.True(point |> boardPointEmpty board = None)
 
     let point2 = {point with y = point.y - 1}
 
-    Assert.True(point2 |> boardPointEmpty board)
+    Assert.True(point2 |> boardPointEmpty board = Some point2)
 
 
 [<Fact>]

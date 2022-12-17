@@ -130,20 +130,22 @@ module Day14 =
 
     let boardPointEmpty board point =
         
-        let isOutside = point |> insideBoardBounds board |> not
-
-        if isOutside then
-            true
+        if board.pebbles |> Set.contains point then
+            None
         else
-            let pointPosition = convertToStringPosition board point
-            let c = board.stringForm[pointPosition]
-            c = '.'
+            let isOutside = point |> insideBoardBounds board |> not
+
+            if isOutside then
+                Some point
+            else
+                let pointPosition = convertToStringPosition board point
+                let c = board.stringForm[pointPosition]
+                if c = '.' then
+                    Some point
+                else
+                    None
 
     let dropSand (board:Board) =
-        
-        let isValidMove board point =
-            board.pebbles |> Set.contains point |> not &&
-            point |> boardPointEmpty board
 
         let rec dropSandRecursive currentBoard point =
             
@@ -153,22 +155,17 @@ module Day14 =
 
             let validMoves =
                 [down; left; right]
-                |> List.map (fun p -> 
-                    let valid = p|> isValidMove currentBoard
-                    match valid with
-                    | true -> Some p
-                    | false -> None
-                )
+                |> List.map (fun p -> p|> boardPointEmpty currentBoard)
                 |> List.choose id
 
             match validMoves with
             | [] ->
                 {currentBoard with pebbles = currentBoard.pebbles |> Set.add point} 
-            | head :: _ ->
-                if head |> insideBoardBounds currentBoard |> not then
+            | next :: _ ->
+                if next |> insideBoardBounds currentBoard |> not then
                     currentBoard
                 else
-                    dropSandRecursive currentBoard head
+                    dropSandRecursive currentBoard next
 
         let start = {x = 500; y = 0}
         dropSandRecursive board start
