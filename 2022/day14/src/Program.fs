@@ -20,6 +20,10 @@ module Day14 =
         pebbles: Set<Point>
     }
 
+    let outputAndPause (message:string) = 
+        System.Console.WriteLine(message)
+        System.Console.ReadLine() |> ignore
+
     let parsePoint (input:string) =
         let parts = input.Split(',')
         match parts with
@@ -142,31 +146,6 @@ module Day14 =
                     None
             else
                 Some point
-                
-    let dropSand (board:Board) =
-
-        let rec dropSandRecursive currentBoard point =
-            
-            let down = {point with y = point.y + 1}
-            let left = {down with x = point.x - 1}
-            let right = {down with x = point.x + 1}
-
-            let validMoves =
-                [down; left; right]
-                |> List.map (fun p -> p|> boardPointAvailable currentBoard)
-                |> List.choose id
-
-            match validMoves with
-            | [] ->
-                {currentBoard with pebbles = currentBoard.pebbles |> Set.add point} 
-            | next :: _ ->
-                if next |> insideBoardBounds currentBoard |> not then
-                    currentBoard
-                else
-                    dropSandRecursive currentBoard next
-
-        let start = {x = 500; y = 0}
-        dropSandRecursive board start
 
     let debugBoard board =
         System.Console.Clear()
@@ -182,6 +161,38 @@ module Day14 =
             System.Console.SetCursorPosition(x,y)
             System.Console.Write('o')
         )
+
+        System.Console.SetCursorPosition(0, board.height)
+
+                
+    let dropSand (board:Board) =
+
+        let rec droppingPebbleStep currentBoard point =
+            
+            let down = {point with y = point.y + 1}
+            let left = {down with x = point.x - 1}
+            let right = {down with x = point.x + 1}
+
+            let validMoves =
+                [down; left; right]
+                |> List.map (fun p -> p|> boardPointAvailable currentBoard)
+                |> List.choose id
+
+            match validMoves with
+            | [] ->
+                let finalBoard = {currentBoard with pebbles = currentBoard.pebbles |> Set.add point}
+                debugBoard finalBoard
+                outputAndPause $"terminating with settled pebble {point}"
+                finalBoard
+            | next :: _ ->
+                if next |> insideBoardBounds currentBoard |> not then
+                    outputAndPause "terminating because next point is out of bounds"
+                    currentBoard
+                else
+                    droppingPebbleStep currentBoard next
+
+        let start = {x = 500; y = 0}
+        droppingPebbleStep board start
 
     let rec dropSandUntilOverflow board =
 
