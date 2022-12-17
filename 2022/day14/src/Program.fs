@@ -17,6 +17,7 @@ module Day14 =
         width: int
         height: int
         minX: int
+        pebbles: Point list
     }
 
     let parsePoint (input:string) =
@@ -59,33 +60,40 @@ module Day14 =
         |> Array.collect parseLines
         |> Array.collect extractPoints
         |> Array.distinct
+        |> List.ofArray
 
-    let findHeight (points:Point array) =
-        (points |> Array.maxBy (fun p -> p.y)).y + 1
+    let findHeight (points:Point list) =
+        (points |> List.maxBy (fun p -> p.y)).y + 1
 
-    let findWidth (points:Point array) =
+    let findWidth (points:Point list) =
         (
-            (points |> Array.minBy (fun p -> p.x)).x,
-            (points |> Array.maxBy (fun p -> p.x)).x
+            (points |> List.minBy (fun p -> p.x)).x,
+            (points |> List.maxBy (fun p -> p.x)).x
         )
 
-    let generateBoard (points:Point array) =
+    let generateBoard verbose (points:Point list) =
         let height = points |> findHeight
         let (minx, maxx) = points |> findWidth
 
         let width = maxx - minx + 1
+
+        if verbose then
+            System.Console.WriteLine($"Generating board width={width}, height={height}")
 
         let str =
             String.init
                 (width * (height-1) + height)
                 (fun index ->
                     
-                    let row = index / (height)
+                    let row = index / width
                     let column = index - row * width
 
                     let candidatePoint = {x = minx + column; y = row}
 
-                    let contains = points |> Array.contains candidatePoint
+                    let contains = points |> List.contains candidatePoint
+
+                    if verbose then
+                        System.Console.WriteLine($"Mapped {index} to x={column},y={row}")
 
                     match contains with
                     | true -> "#"
@@ -102,7 +110,8 @@ module Day14 =
             stringForm = stringForm;
             height = height;
             width = width;
-            minX = minx
+            minX = minx;
+            pebbles = [];
         }
 
     let convertToStringPosition board point =
@@ -114,38 +123,101 @@ module Day14 =
             |> Seq.map (fun c -> System.String(c))
             |> Seq.iter (fun s -> System.Console.WriteLine(s))
 
+    let insideBoardBounds board point =
+        point.x >= board.minX &&
+        point.x < (board.minX + board.width) &&
+        point.y < board.height
+
+    let boardPointEmpty board point =
+        
+        let isOutside = point |> insideBoardBounds board |> not
+
+        if isOutside then
+            true
+        else
+            let pointPosition = convertToStringPosition board point
+            let c = board.stringForm[pointPosition]
+            c = '.'
+
+    let dropSand (board:Board) =
+        
+        let isValidMove board point =
+            board.pebbles |> List.contains point |> not &&
+            point |> boardPointEmpty board
+
+        let rec dropSandRecursive currentBoard point =
+            
+            let down = {point with y = point.y + 1}
+            let left = {down with x = point.x - 1}
+            let right = {down with x = point.x + 1}
+
+            let validMoves =
+                [down; left; right]
+                |> List.map (fun p -> 
+                    let valid = p|> isValidMove currentBoard
+                    match valid with
+                    | true -> Some p
+                    | false -> None
+                )
+                |> List.choose id
+
+            match validMoves with
+            | [] ->
+                {currentBoard with pebbles = point :: currentBoard.pebbles}
+            | head :: _ ->
+                if head |> insideBoardBounds currentBoard |> not then
+                    currentBoard
+                else
+                    dropSandRecursive currentBoard head
+
+        let start = {x = 500; y = 0}
+        dropSandRecursive board start
+
+    let debugBoard board points =
+        System.Console.Clear()
+        System.Console.SetCursorPosition(0, 0)
+        renderNicely board
+
+        points
+        |> List.iter (fun p -> 
+            // conver to coordinates
+            let x = p.x - board.minX
+            let y = p.y
+
+            System.Console.SetCursorPosition(x,y)
+            System.Console.Write('o')
+        )
+
+    let rec dropSandCall debug board counter =
+        if counter = 0 then
+            board
+        else
+            let newBoard = dropSand board
+            
+            if debug then
+                debugBoard newBoard board.pebbles
+                System.Console.ReadLine() |> ignore
+
+            dropSandCall debug newBoard (counter - 1)
+
+    let rec dropSandUntilOverflow board =
+
+        let afterDrop = dropSand board
+        match afterDrop.pebbles.Length = board.pebbles.Length with
+        | true -> board
+        | false -> dropSandUntilOverflow afterDrop
+
     let points =
         System.IO.File.ReadAllText("input.txt")
         |> parseToDistinctPoints
 
-    let dropSand (board:Board) =
-        let createNewBoardWithSandPebble board position =
-            let arr = board.stringForm.ToCharArray()
-            arr[position] <- 'o'
-            let newForm = System.String(arr)
-            { board with stringForm = newForm }
+    System.Console.WriteLine($"Points {points.Length}")
+    
+    let board = points |> generateBoard false
 
-        let rec dropSandRecursive currentBoard point =
-            
-            let newPoint = {point with y = point.y + 1}
-            let newPointPosition = convertToStringPosition currentBoard newPoint
-            let c = currentBoard.stringForm[newPointPosition]
-            match c with 
-            | '.' -> dropSandRecursive (createNewBoardWithSandPebble currentBoard newPointPosition) newPoint
-            | _ -> currentBoard
-
-        let start = {x = 500; y = 0}
-        dropSandRecursive board start
-        
-        // let positionInString = convertToStringPosition board start
-        // arr[positionInString] <- 'o'
-        // let newForm = System.String(arr)
-        // { board with stringForm = newForm }
-
-    let (minx, maxx) = points |> findWidth
-    let width = maxx - minx + 1
-    let board = points |> generateBoard
+    System.Console.WriteLine($"Board: height {board.height}, width {board.width}, minx {board.minX}")
 
     System.Console.WriteLine(board.stringForm)
-    
-    board |> dropSand |> renderNicely
+    let newBoard = dropSandUntilOverflow board
+
+    System.Console.WriteLine($"{newBoard.pebbles.Length}")

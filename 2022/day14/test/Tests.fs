@@ -92,7 +92,7 @@ let ``Width range discovery works`` () =
 [<Fact>]
 let ``Render works`` () =
 
-    let board = _sampleLines |> parseToDistinctPoints |> generateBoard
+    let board = _sampleLines |> parseToDistinctPoints |> generateBoard false
 
     let expected = @"............................................#...##....#...#...###...#.........#.........#.#########."
 
@@ -101,8 +101,40 @@ let ``Render works`` () =
     Assert.Equal(10, board.height)
 
 [<Fact>]
-let ``Drop sand, renders sand as o`` () =
+let ``empty board point checks`` () =
+    let board = _sampleLines |> parseToDistinctPoints |> generateBoard false
+    let point = {x = 494; y = 9}
 
-    let board = _sampleLines |> parseToDistinctPoints |> generateBoard
+    Assert.False(point |> boardPointEmpty board)
 
-    Assert.Equal(board.height, 10)
+    let point2 = {point with y = point.y - 1}
+
+    Assert.True(point2 |> boardPointEmpty board)
+
+
+[<Fact>]
+let ``Drop sand, sand grows`` () =
+
+    let board1 = _sampleLines |> parseToDistinctPoints |> generateBoard false |> dropSand
+
+    Assert.Single(board1.pebbles) |> ignore
+    Assert.Equal(500, board1.pebbles[0].x)
+    Assert.Equal(8, board1.pebbles[0].y)
+
+    let board2 = board1 |> dropSand
+    Assert.Equal(2, board2.pebbles.Length) |> ignore
+    Assert.Equal(499, board2.pebbles[0].x)
+    Assert.Equal(8, board2.pebbles[0].y)
+
+    let board3 = board2 |> dropSand
+    Assert.Equal(3, board3.pebbles.Length) |> ignore
+    Assert.Equal(501, board3.pebbles[0].x)
+    Assert.Equal(8, board3.pebbles[0].y)
+
+[<Fact>]
+let ``Drop sand until overflow`` () =
+    let board = _sampleLines |> parseToDistinctPoints |> generateBoard false
+
+    let newBoard = dropSandUntilOverflow board
+
+    Assert.Equal(24, newBoard.pebbles.Length)
