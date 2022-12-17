@@ -2,6 +2,7 @@ module Tests
 
 open Xunit
 open AdventOfCode.Day14
+open System.Collections.Generic
 
 let _sampleLines = @"498,4 -> 498,6 -> 496,6
 503,4 -> 502,4 -> 502,9 -> 494,9"
@@ -118,18 +119,15 @@ let ``Drop sand, sand grows`` () =
     let board1 = _sampleLines |> parseToDistinctPoints |> generateBoard false |> dropSand
 
     Assert.Single(board1.pebbles) |> ignore
-    Assert.Equal(500, board1.pebbles[0].x)
-    Assert.Equal(8, board1.pebbles[0].y)
+    Assert.True(board1.pebbles.Contains({x = 500; y = 8}))
 
     let board2 = board1 |> dropSand
-    Assert.Equal(2, board2.pebbles.Length) |> ignore
-    Assert.Equal(499, board2.pebbles[0].x)
-    Assert.Equal(8, board2.pebbles[0].y)
+    Assert.Equal(2, board2.pebbles.Count)
+    Assert.True(board2.pebbles.Contains({x = 499; y = 8}))
 
     let board3 = board2 |> dropSand
-    Assert.Equal(3, board3.pebbles.Length) |> ignore
-    Assert.Equal(501, board3.pebbles[0].x)
-    Assert.Equal(8, board3.pebbles[0].y)
+    Assert.Equal(3, board3.pebbles.Count)
+    Assert.True(board3.pebbles.Contains({x = 501; y = 8}))
 
 [<Fact>]
 let ``Drop sand until overflow`` () =
@@ -137,4 +135,4 @@ let ``Drop sand until overflow`` () =
 
     let newBoard = dropSandUntilOverflow board
 
-    Assert.Equal(24, newBoard.pebbles.Length)
+    Assert.Equal(24, newBoard.pebbles.Count)

@@ -1,6 +1,7 @@
 ﻿namespace AdventOfCode
 
 module Day14 =
+    open System.Collections.Generic
 
     type Point = {
         x : int
@@ -17,7 +18,7 @@ module Day14 =
         width: int
         height: int
         minX: int
-        pebbles: Point list
+        pebbles: Set<Point>
     }
 
     let parsePoint (input:string) =
@@ -111,7 +112,7 @@ module Day14 =
             height = height;
             width = width;
             minX = minx;
-            pebbles = [];
+            pebbles = Set.empty<Point>
         }
 
     let convertToStringPosition board point =
@@ -142,7 +143,7 @@ module Day14 =
     let dropSand (board:Board) =
         
         let isValidMove board point =
-            board.pebbles |> List.contains point |> not &&
+            board.pebbles |> Set.contains point |> not &&
             point |> boardPointEmpty board
 
         let rec dropSandRecursive currentBoard point =
@@ -163,7 +164,7 @@ module Day14 =
 
             match validMoves with
             | [] ->
-                {currentBoard with pebbles = point :: currentBoard.pebbles}
+                {currentBoard with pebbles = currentBoard.pebbles |> Set.add point} 
             | head :: _ ->
                 if head |> insideBoardBounds currentBoard |> not then
                     currentBoard
@@ -173,13 +174,13 @@ module Day14 =
         let start = {x = 500; y = 0}
         dropSandRecursive board start
 
-    let debugBoard board points =
+    let debugBoard board =
         System.Console.Clear()
         System.Console.SetCursorPosition(0, 0)
         renderNicely board
 
-        points
-        |> List.iter (fun p -> 
+        board.pebbles
+        |> Seq.iter (fun p -> 
             // conver to coordinates
             let x = p.x - board.minX
             let y = p.y
@@ -188,22 +189,10 @@ module Day14 =
             System.Console.Write('o')
         )
 
-    let rec dropSandCall debug board counter =
-        if counter = 0 then
-            board
-        else
-            let newBoard = dropSand board
-            
-            if debug then
-                debugBoard newBoard board.pebbles
-                System.Console.ReadLine() |> ignore
-
-            dropSandCall debug newBoard (counter - 1)
-
     let rec dropSandUntilOverflow board =
 
         let afterDrop = dropSand board
-        match afterDrop.pebbles.Length = board.pebbles.Length with
+        match afterDrop.pebbles.Count = board.pebbles.Count with
         | true -> board
         | false -> dropSandUntilOverflow afterDrop
 
@@ -220,4 +209,4 @@ module Day14 =
     System.Console.WriteLine(board.stringForm)
     let newBoard = dropSandUntilOverflow board
 
-    System.Console.WriteLine($"{newBoard.pebbles.Length}")
+    System.Console.WriteLine($"{newBoard.pebbles.Count}")
