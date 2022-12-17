@@ -1,8 +1,7 @@
 ﻿namespace AdventOfCode
 
 module Day14 =
-    open System.Collections.Generic
-
+    
     type Point = {
         x : int
         y : int
