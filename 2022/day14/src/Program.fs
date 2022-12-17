@@ -128,23 +128,21 @@ module Day14 =
         point.x < (board.minX + board.width) &&
         point.y < board.height
 
-    let boardPointEmpty board point =
+    let boardPointAvailable board point =
         
         if board.pebbles |> Set.contains point then
             None
         else
-            let isOutside = point |> insideBoardBounds board |> not
-
-            if isOutside then
-                Some point
-            else
+            if point |> insideBoardBounds board then
                 let pointPosition = convertToStringPosition board point
                 let c = board.stringForm[pointPosition]
                 if c = '.' then
                     Some point
                 else
                     None
-
+            else
+                Some point
+                
     let dropSand (board:Board) =
 
         let rec dropSandRecursive currentBoard point =
@@ -155,7 +153,7 @@ module Day14 =
 
             let validMoves =
                 [down; left; right]
-                |> List.map (fun p -> p|> boardPointEmpty currentBoard)
+                |> List.map (fun p -> p|> boardPointAvailable currentBoard)
                 |> List.choose id
 
             match validMoves with
