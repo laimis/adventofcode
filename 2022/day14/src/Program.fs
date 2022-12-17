@@ -134,16 +134,14 @@ module Day14 =
         if board.pebbles |> Set.contains point then
             false
         else
-            let isOutside = point |> insideBoardBounds board |> not
-
-            if isOutside then
-                true
-            else
+            if point |> insideBoardBounds board then
                 let pointPosition = convertToStringPosition board point
                 let c = board.stringForm[pointPosition]
                 c = '.'
+            else
+                true
 
-    let dropSand (board:Board) =
+    let dropSand isInsideWorldCheck (board:Board) =
         
         let rec dropSandRecursive currentBoard point =
             
@@ -165,7 +163,7 @@ module Day14 =
             | [] ->
                 {currentBoard with pebbles = currentBoard.pebbles |> Set.add point} 
             | head :: _ ->
-                if head |> insideBoardBounds currentBoard |> not then
+                if head |> isInsideWorldCheck currentBoard |> not then
                     currentBoard
                 else
                     dropSandRecursive currentBoard head
@@ -188,12 +186,12 @@ module Day14 =
             System.Console.Write('o')
         )
 
-    let rec dropSandUntilOverflow board =
+    let rec dropSandUntilOverflow isInsideWorldCheck board =
 
-        let afterDrop = dropSand board
+        let afterDrop = board |> dropSand isInsideWorldCheck
         match afterDrop.pebbles.Count = board.pebbles.Count with
         | true -> board
-        | false -> dropSandUntilOverflow afterDrop
+        | false -> afterDrop |> dropSandUntilOverflow isInsideWorldCheck
 
     let points =
         System.IO.File.ReadAllText("input.txt")
@@ -206,6 +204,6 @@ module Day14 =
     System.Console.WriteLine($"Board: height {board.height}, width {board.width}, minx {board.minX}")
 
     System.Console.WriteLine(board.stringForm)
-    let newBoard = dropSandUntilOverflow board
+    let newBoard = board |> dropSandUntilOverflow insideBoardBounds
 
     System.Console.WriteLine($"{newBoard.pebbles.Count}")
