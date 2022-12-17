@@ -116,16 +116,16 @@ let ``empty board point checks`` () =
 [<Fact>]
 let ``Drop sand, sand grows`` () =
 
-    let board1 = _sampleLines |> parseToDistinctPoints |> generateBoard false |> dropSand
+    let board1 = _sampleLines |> parseToDistinctPoints |> generateBoard false |> dropSand insideBoardBounds
 
     Assert.Single(board1.pebbles) |> ignore
     Assert.True(board1.pebbles.Contains({x = 500; y = 8}))
 
-    let board2 = board1 |> dropSand
+    let board2 = board1 |> dropSand insideBoardBounds
     Assert.Equal(2, board2.pebbles.Count)
     Assert.True(board2.pebbles.Contains({x = 499; y = 8}))
 
-    let board3 = board2 |> dropSand
+    let board3 = board2 |> dropSand insideBoardBounds
     Assert.Equal(3, board3.pebbles.Count)
     Assert.True(board3.pebbles.Contains({x = 501; y = 8}))
 
@@ -133,6 +133,6 @@ let ``Drop sand, sand grows`` () =
 let ``Drop sand until overflow`` () =
     let board = _sampleLines |> parseToDistinctPoints |> generateBoard false
 
-    let newBoard = dropSandUntilOverflow board
+    let newBoard = board |> dropSandUntilOverflow insideBoardBounds
 
     Assert.Equal(24, newBoard.pebbles.Count)
