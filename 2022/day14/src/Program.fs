@@ -145,7 +145,11 @@ module Day14 =
                 else
                     None
             else
-                Some point
+                // check the floor
+                if point.y < board.height + 1 then
+                    Some point
+                else
+                    None
 
     let debugBoard board =
         System.Console.Clear()
@@ -158,14 +162,15 @@ module Day14 =
             let x = p.x - board.minX
             let y = p.y
 
-            System.Console.SetCursorPosition(x,y)
-            System.Console.Write('o')
+            if x >= 0 && y >= 0 then
+                System.Console.SetCursorPosition(x,y)
+                System.Console.Write('o')
         )
 
         System.Console.SetCursorPosition(0, board.height)
 
                 
-    let dropSand (board:Board) =
+    let dropSand verbose respectBoundary (board:Board) =
 
         let rec droppingPebbleStep currentBoard point =
             
@@ -181,12 +186,19 @@ module Day14 =
             match validMoves with
             | [] ->
                 let finalBoard = {currentBoard with pebbles = currentBoard.pebbles |> Set.add point}
-                debugBoard finalBoard
-                outputAndPause $"terminating with settled pebble {point}"
+                
+                if verbose then
+                    debugBoard finalBoard
+                    outputAndPause $"terminating with settled pebble {point}"
+
                 finalBoard
             | next :: _ ->
-                if next |> insideBoardBounds currentBoard |> not then
-                    outputAndPause "terminating because next point is out of bounds"
+                
+                if respectBoundary && next |> insideBoardBounds currentBoard |> not then
+                    
+                    if verbose then
+                        outputAndPause "terminating because next point is out of bounds"
+                        
                     currentBoard
                 else
                     droppingPebbleStep currentBoard next
@@ -194,12 +206,18 @@ module Day14 =
         let start = {x = 500; y = 0}
         droppingPebbleStep board start
 
-    let rec dropSandUntilOverflow board =
+    let rec private dropSandUntilOverflow verbose respectBoundary board =
 
-        let afterDrop = dropSand board
+        let afterDrop = dropSand verbose respectBoundary  board
         match afterDrop.pebbles.Count = board.pebbles.Count with
         | true -> board
-        | false -> dropSandUntilOverflow afterDrop
+        | false -> dropSandUntilOverflow verbose respectBoundary afterDrop
+
+    let dropSandPart1 verbose board =
+        dropSandUntilOverflow verbose true board
+
+    let dropSandPart2 verbose board =
+        dropSandUntilOverflow verbose false board
 
     let points =
         System.IO.File.ReadAllText("input.txt")
@@ -212,6 +230,13 @@ module Day14 =
     System.Console.WriteLine($"Board: height {board.height}, width {board.width}, minx {board.minX}")
 
     System.Console.WriteLine(board.stringForm)
-    let newBoard = dropSandUntilOverflow board
 
-    System.Console.WriteLine($"{newBoard.pebbles.Count}")
+    let verbose = false
+
+    let part1 = dropSandPart1 verbose board
+
+    System.Console.WriteLine($"Part 1: {part1.pebbles.Count}")
+
+    let part2 = dropSandPart2 verbose board
+
+    System.Console.WriteLine($"Part 2: {part2.pebbles.Count}")
