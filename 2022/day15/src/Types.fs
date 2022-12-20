@@ -95,7 +95,9 @@ module Types =
         )
 
     let generateSensorBeaconPairs (verbose:bool) (input:string) =
-        
+        if verbose then
+            System.Console.WriteLine("Generating sensor/beacon pairs")
+            
         input.Split(System.Environment.NewLine)
         |> Array.map parse
         |> Array.map (fun (sensor, beacon) ->
@@ -107,15 +109,20 @@ module Types =
             }
         )
 
-    let calculateCoverageRangeForSensor sensorBeaconPair yOfInterest =
+    let calculateCoverageRangeForSensor verbose sensorBeaconPair yOfInterest =
         let sensor = sensorBeaconPair.sensor
 
         let distance = sensor |> distanceFrom {x=sensor.x;y=yOfInterest}
 
         if distance > sensorBeaconPair.distance then
+            if verbose then
+                System.Console.WriteLine($"distance of {distance} too far from {sensorBeaconPair.distance}")
             None
         else
-            let pointAdjustment = abs distance - sensorBeaconPair.distance
+            let pointAdjustment = abs (distance - sensorBeaconPair.distance)
+            if verbose then
+                System.Console.WriteLine($"distance is within sensor {sensorBeaconPair.distance} distance, using adjustment of {pointAdjustment}")
+
             // the points will be at the row of interest, -diff and +diff on x axis
             Some(
                 {x=sensor.x - pointAdjustment; y=yOfInterest},
