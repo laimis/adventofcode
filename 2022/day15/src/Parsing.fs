@@ -43,36 +43,56 @@ module Parsing =
 
     let generateBoard verbose (input:string) =
 
+        if verbose then
+            System.Console.WriteLine("generating board...")
+
         let sensorBeaconPairs =
             input.Split(System.Environment.NewLine)
             |> Array.map parse
 
+        if verbose then
+            System.Console.WriteLine("... parsed pairs")
+
         let sensors = sensorBeaconPairs |> Array.map fst |> Set.ofArray
         let beacons = sensorBeaconPairs |> Array.map snd |> Set.ofArray
 
+        if verbose then
+            System.Console.WriteLine($"... {sensors.Count} sensors")
+            System.Console.WriteLine($"... {sensors.Count} beacons")
+
+        let toCoveragePoints (sensor, beacon) =
+            let distance = sensor |> distanceFrom beacon
+            
+            if verbose then
+                System.Console.WriteLine($"... generating points for {sensor} with distance of {distance}")
+
+            generateCoveragePoints sensor distance
+
         let coveragePoints =
             sensorBeaconPairs
-            |> Array.map (fun (s,b) -> generateCoveragePoints s (s |> distanceFrom b))
+            |> Array.map toCoveragePoints
             |> Array.fold( fun state set -> set |> Set.union state ) Set.empty<Point>
 
-        let height = coveragePoints |> findHeight
-        let (minx, maxx) = coveragePoints |> findWidth
+        let pointsForDimmensions = coveragePoints
+        // let pointsForDimmensions = sensors |> Set.union beacons
+
+        let height = pointsForDimmensions |> findHeight
+        let (minx, maxx) = pointsForDimmensions |> findWidth
 
         let width = maxx - minx + 1
 
+        let count = width * height
+
         if verbose then
-            System.Console.WriteLine($"Generating board width={width}, height={height}")
+            System.Console.WriteLine($"Generating board width={width}, height={height}, points: {width * height}")
 
         let str =
             String.init
-                (width * (height-1) + height)
+                count
                 (fun index ->
                     
                     let row = index / width
                     let column = index - row * width
-
-                    if verbose then
-                        System.Console.WriteLine($"Mapped {index} to x={column},y={row}")
 
                     let candidatePoint = {x = minx + column; y = row}
 
