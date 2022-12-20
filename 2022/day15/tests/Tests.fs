@@ -1,6 +1,5 @@
 module Tests
 
-open Day15.Parsing
 open Day15.Types
 open Xunit
 
@@ -64,7 +63,7 @@ let ``Point coverage given sensor and closest beacon`` distance expectedPoints =
 [<Fact>]
 let ``board parsing works``() =
 
-    let board = generateBoard false sampleInput
+    let board = generateStringBoard false sampleInput
 
     Assert.Equal(37, board.width)
     Assert.Equal(27, board.height)
@@ -76,7 +75,7 @@ let ``board parsing works``() =
 [<Fact>]
 let ``coverage point count works`` () =
 
-    let board = generateBoard false sampleInput
+    let board = generateStringBoard false sampleInput
 
     let row = board |> getRowAsString 10
 
@@ -88,8 +87,31 @@ let ``coverage point count works`` () =
 [<Fact>]
 let ``non beacon point count works`` () =
 
-    let board = generateBoard false sampleInput
+    let board = generateStringBoard false sampleInput
 
     let count = board |> getUnavailableBeaconSpots 10
 
     Assert.Equal(26, count)
+
+[<Fact>]
+let ``generate sensor and beacon pairs works``() =
+    let pairs = generateSensorBeaconPairs false sampleInput
+
+    Assert.Equal(14, pairs.Length)
+
+[<Fact>]
+let ``coverage point calculations correct`` () =
+
+    let sensorBeaconPair = {
+        sensor = {x=8; y=7};
+        beacon = {x=1; y=1};
+        distance = 9
+    }
+
+    let range = calculateCoverageRangeForSensor sensorBeaconPair -2
+
+    Assert.True(range.IsSome)
+
+    let (s,e) = range.Value
+    
+    Assert.Equal(s, e)
