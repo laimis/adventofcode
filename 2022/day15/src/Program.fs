@@ -1,36 +1,19 @@
-﻿module Day15
+﻿open Day15.Types
+open Day15.Parsing
+open Day15.Presentation
+    
+let input = System.IO.File.ReadAllText("input.txt")
 
-    type Point = {x: int; y: int}
+let verbose = false
 
-    let parseX (input:string) =
-        let start = input.IndexOf("x=") + 2
-        let ending = input.IndexOf(",")
+let board = generateBoard verbose input
 
-        input.Substring(start, ending - start)
+System.Console.WriteLine($"Board generated")
+System.Console.WriteLine($"width: {board.width}, height: {board.height}")
+System.Console.WriteLine(board.stringForm)
 
-    let parseY (input:string) =
-        let start = input.IndexOf("y=") + 2
-        let ending = input.Length
+// System.Console.WriteLine(board |> renderNicely)
 
-        input.Substring(start, ending - start)
+let unavailableSpots = board |> getUnavailableBeaconSpots 10
+System.Console.WriteLine(unavailableSpots)
 
-    let parse (input:string) =
-
-        let parts = input.Split(':')
-        
-        let sensor = {
-            x = int (parseX parts[0])
-            y = int (parseY parts[0])
-        }
-
-        let beacon = {
-            x = int (parseX parts[1])
-            y = int (parseY parts[1])
-        }
-
-        (sensor, beacon)
-
-    let distanceFrom point1 point2 =
-        abs (point1.x - point2.x) + abs (point1.y - point2.y)    
-
-    System.Console.WriteLine("Hello")
