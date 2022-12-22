@@ -111,7 +111,45 @@ let findShortestPath verbose (tree:Map<string,Valve>) start ending =
 
     shortestPath
 
-let findAllPaths verbose (tree:Map<string,Valve>) start ending =
+let findAllPathsDfs verbose (tree:Map<string,Valve>) start ending =
+    
+    let visit (currentNode:string) =
+
+        if verbose then
+            System.Console.WriteLine($"checking if {currentNode} is {ending}")
+        
+        currentNode = ending
+
+    let rec allPathsRec currentNode currentPath foundPaths =
+        if verbose then
+            System.Console.Write($"Exploring {currentPath}...")
+
+        if currentNode |> visit then
+            System.Console.WriteLine(" destination found!")
+            System.Console.ReadLine() |> ignore
+            foundPaths @ [currentPath]
+        else
+            System.Console.WriteLine(" destination not found, moving further")
+            System.Console.ReadLine() |> ignore
+
+            let valve = tree[currentNode]
+            let next = 
+                valve.next
+                |> List.filter ( fun n -> currentPath |> List.contains n |> not)
+
+            match next with
+            | [] -> foundPaths
+            | _ -> 
+                next 
+                |> List.map(fun p -> 
+                    let nextPath = currentPath @ [p]
+                    allPathsRec p nextPath foundPaths
+                )
+                |> List.concat
+
+    allPathsRec start [start] []
+
+let findAllPathsBfs verbose (tree:Map<string,Valve>) start ending =
     
     let visit (currentNode:string) =
 
@@ -202,6 +240,10 @@ for from in valves.Keys do
 let shortestPath = findShortestPath true valves "AA" "CC"
 System.Console.WriteLine($"Shortest path from AA to CC is {shortestPath}")
 
-let allPaths = findAllPaths true valves "AA" "CC"
-System.Console.WriteLine($"Paths from AA to CC: {allPaths.Length}")
-allPaths |> List.iter System.Console.WriteLine
+let bfsPaths = findAllPathsBfs true valves "AA" "CC"
+System.Console.WriteLine($"BFS Paths from AA to CC: {bfsPaths.Length}")
+bfsPaths |> List.iter System.Console.WriteLine
+
+let dfsPaths = findAllPathsDfs true valves "AA" "CC"
+System.Console.WriteLine($"DFS Paths from AA to CC: {dfsPaths.Length}")
+dfsPaths |> List.iter System.Console.WriteLine
