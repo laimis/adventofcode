@@ -71,9 +71,94 @@ let bfs verbose (tree:Map<string,Valve>) start =
         |> List.filter ( fun n -> visited.Contains(n) |> not)
         |> List.iter (queue.Enqueue)
 
+let findShortestPath verbose (tree:Map<string,Valve>) start ending =
+    
+    let visit (currentNode:string) =
+
+        if verbose then
+            System.Console.WriteLine($"checking if {currentNode} is {ending}")
+        
+        currentNode = ending
+
+
+    let queue = new System.Collections.Generic.Queue<string list>()
+
+    queue.Enqueue([start])
+
+    let visited = new System.Collections.Generic.HashSet<string>()
+    visited.Add(start) |> ignore
+
+    let mutable shortestPath = []
+
+    while queue.Count > 0 do
+        let currentPath = queue.Dequeue()
+        let currentNode = currentPath |> List.last
+        if currentNode |> visit then
+            shortestPath <- currentPath
+            queue.Clear()
+        else
+
+            visited.Add(currentNode) |> ignore
+
+            let valve = tree[currentNode]
+
+            valve.next
+            |> List.filter ( fun n -> visited.Contains(n) |> not)
+            |> List.iter (fun n ->
+                let newPath = [n] |> List.append currentPath
+                queue.Enqueue(newPath)
+            )
+
+    shortestPath
+
+let findAllPaths verbose (tree:Map<string,Valve>) start ending =
+    
+    let visit (currentNode:string) =
+
+        if verbose then
+            System.Console.WriteLine($"checking if {currentNode} is {ending}")
+        
+        currentNode = ending
+
+
+    let queue = new System.Collections.Generic.Queue<string list>()
+    queue.Enqueue([start])
+
+    let rec allPathsRec foundPaths =
+        if queue.Count = 0 then
+            if verbose then
+                System.Console.WriteLine("Reached the end of queue")
+                System.Console.ReadLine() |> ignore
+            foundPaths
+        else
+            let currentPath = queue.Dequeue()
+            let currentNode = currentPath |> List.last
+
+            if verbose then
+                System.Console.Write($"Exploring {currentPath}...")
+
+            if currentNode |> visit then
+                System.Console.WriteLine(" destination found!")
+                System.Console.ReadLine() |> ignore
+                allPathsRec foundPaths @ [currentPath]
+            else
+                System.Console.WriteLine(" destination not found, moving further")
+                System.Console.ReadLine() |> ignore
+
+                let valve = tree[currentNode]
+                valve.next
+                    |> List.filter ( fun n -> currentPath |> List.contains n |> not)
+                    |> List.iter( fun n -> 
+                        let newPath = currentPath @ [n]
+                        queue.Enqueue(newPath)
+                    )
+
+                allPathsRec foundPaths
+
+    allPathsRec []
+                    
 let numberOfSteps verbose (tree:Map<string,Valve>) start ending =
     
-    let maxDistance = 1000
     let rec numberOfStepsRec currentNode visited distance =
         if verbose then
             System.Console.Write($"search for {ending}, at {currentNode} with distance {distance}")
@@ -114,4 +199,9 @@ for from in valves.Keys do
         let distance = numberOfSteps false valves from toNode
         System.Console.WriteLine($"Distance from {from} to {toNode} is {distance}")
 
+let shortestPath = findShortestPath true valves "AA" "CC"
+System.Console.WriteLine($"Shortest path from AA to CC is {shortestPath}")
 
+let allPaths = findAllPaths true valves "AA" "CC"
+System.Console.WriteLine($"Paths from AA to CC: {allPaths.Length}")
+allPaths |> List.iter System.Console.WriteLine
