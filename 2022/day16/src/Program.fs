@@ -136,7 +136,6 @@ let findAllPathsBfs verbose (tree:Map<string,Valve>) start ending =
 
     allPathsRec []
 
-
 let findShortestPath verbose (tree:Map<string,Valve>) start ending =
     
     let paths = findAllPathsBfs verbose tree start ending
@@ -151,19 +150,52 @@ let numberOfSteps verbose (tree:Map<string,Valve>) start ending =
 
     Some (shortest.Length - 1)
 
+let valvesWithPressure (valves:seq<Valve>) =
+    valves
+    |> Seq.filter (fun v -> v.rate > 0)
+    |> Seq.sortByDescending (fun v -> v.rate)
+    |> List.ofSeq
+
+let pathPressureReleasePotential (valves:Map<string,Valve>) path =
+    path
+    |> List.map (fun v -> valves[v].rate)
+    |> List.sum
+
+let summarize valves start ending =
+    
+    let availablePaths =
+        findAllPathsBfs false valves start ending
+
+    let valve = valves[start]
+
+    let shortest = 
+        availablePaths
+        |> List.sortBy (fun l -> l.Length)
+        |> List.head
+        |> List.length
+
+    System.Console.WriteLine($"{valve.name} {valve.rate} - {shortest} - {availablePaths.Length}")
+    System.Console.ReadLine() |> ignore
+
+    availablePaths
+        |> List.map(fun p -> pathPressureReleasePotential valves p)
+        |> List.iteri(fun i p -> System.Console.WriteLine($"    {availablePaths[i].Length}: {p}"))
+    
+
 let valves = parseValves lines
 
 let verbose = false
 
-// for from in valves.Keys do
-//     for toNode in valves.Keys do
-//         let distance = numberOfSteps false valves from toNode
-//         System.Console.WriteLine($"Distance from {from} to {toNode} is {distance}")
+let sampleValvesWithPressure = valvesWithPressure valves.Values
+System.Console.WriteLine("Valves with pressure:")
+sampleValvesWithPressure
+|> List.iter (fun v -> System.Console.WriteLine($"{v.name}: {v.rate}"))
 
-let shortestPath = findShortestPath verbose valves "AA" "CC"
-System.Console.WriteLine($"Shortest path from AA to CC is {shortestPath}")
+System.Console.WriteLine("Now from input")
 
-let paths = findAllPathsDfs verbose valves "AA" "DD"
-
-System.Console.WriteLine("Paths from AA to DD:")
-paths |> List.iter System.Console.WriteLine
+let inputTxt = System.IO.File.ReadAllText("input.txt")
+let inputValves = parseValves inputTxt
+let inputValvesWithPressure = valvesWithPressure inputValves.Values
+System.Console.WriteLine("Valves with pressure:")
+inputValvesWithPressure
+    |> List.iter (fun v -> summarize inputValves (v.name) "AA")
