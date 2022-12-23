@@ -46,46 +46,6 @@ Valve JJ has flow rate=21; tunnel leads to valve II"
 open Day16
 
 
-let findShortestPath verbose (tree:Map<string,Valve>) start ending =
-    
-    let visit (currentNode:string) =
-
-        if verbose then
-            System.Console.WriteLine($"checking if {currentNode} is {ending}")
-        
-        currentNode = ending
-
-
-    let queue = new System.Collections.Generic.Queue<string list>()
-
-    queue.Enqueue([start])
-
-    let visited = new System.Collections.Generic.HashSet<string>()
-    visited.Add(start) |> ignore
-
-    let mutable shortestPath = []
-
-    while queue.Count > 0 do
-        let currentPath = queue.Dequeue()
-        let currentNode = currentPath |> List.last
-        if currentNode |> visit then
-            shortestPath <- currentPath
-            queue.Clear()
-        else
-
-            visited.Add(currentNode) |> ignore
-
-            let valve = tree[currentNode]
-
-            valve.next
-            |> List.filter ( fun n -> visited.Contains(n) |> not)
-            |> List.iter (fun n ->
-                let newPath = [n] |> List.append currentPath
-                queue.Enqueue(newPath)
-            )
-
-    shortestPath
-
 let findAllPathsDfs verbose (tree:Map<string,Valve>) start ending =
     
     let visit (currentNode:string) =
@@ -103,7 +63,7 @@ let findAllPathsDfs verbose (tree:Map<string,Valve>) start ending =
             if verbose then
                 System.Console.WriteLine(" destination found!")
                 System.Console.ReadLine() |> ignore
-                
+
             foundPaths @ [currentPath]
         else
             if verbose then
@@ -154,12 +114,15 @@ let findAllPathsBfs verbose (tree:Map<string,Valve>) start ending =
                 System.Console.Write($"Exploring {currentPath}...")
 
             if currentNode |> visit then
-                System.Console.WriteLine(" destination found!")
-                System.Console.ReadLine() |> ignore
+                if verbose then
+                    System.Console.WriteLine(" destination found!")
+                    System.Console.ReadLine() |> ignore
+
                 allPathsRec foundPaths @ [currentPath]
             else
-                System.Console.WriteLine(" destination not found, moving further")
-                System.Console.ReadLine() |> ignore
+                if verbose then
+                    System.Console.WriteLine(" destination not found, moving further")
+                    System.Console.ReadLine() |> ignore
 
                 let valve = tree[currentNode]
                 valve.next
@@ -172,58 +135,35 @@ let findAllPathsBfs verbose (tree:Map<string,Valve>) start ending =
                 allPathsRec foundPaths
 
     allPathsRec []
-                    
+
+
+let findShortestPath verbose (tree:Map<string,Valve>) start ending =
+    
+    let paths = findAllPathsBfs verbose tree start ending
+    
+    paths
+    |> List.sortBy (fun p -> p.Length)
+    |> List.head
+
 let numberOfSteps verbose (tree:Map<string,Valve>) start ending =
     
-    let rec numberOfStepsRec currentNode visited distance =
-        if verbose then
-            System.Console.Write($"search for {ending}, at {currentNode} with distance {distance}")
+    let shortest = findShortestPath verbose tree start ending
 
-        if currentNode = ending then
-            if verbose then
-                System.Console.WriteLine(", found!")
-                System.Console.ReadLine() |> ignore
-            Some distance
-        else
-            if verbose then
-                    System.Console.WriteLine(", not found...")
-                    System.Console.ReadLine() |> ignore
-            let valve = tree[currentNode]
-            let candidateDistances =
-                valve.next
-                |> List.filter (fun n -> visited |> Set.contains n |> not)
-                |> List.map (fun n -> numberOfStepsRec n (visited |> Set.add currentNode) (distance + 1))
-                |> List.choose id
-
-            match candidateDistances with
-            | [] -> None
-            | _ -> Some (candidateDistances |> List.min)
-
-    let distance = numberOfStepsRec start Set.empty<string> 0
-    if verbose then
-        System.Console.WriteLine($"distance from {start} to {ending} is {distance}")
-    distance
+    Some (shortest.Length - 1)
 
 let valves = parseValves lines
 
-let verbose = true
+let verbose = false
 
 // for from in valves.Keys do
 //     for toNode in valves.Keys do
 //         let distance = numberOfSteps false valves from toNode
 //         System.Console.WriteLine($"Distance from {from} to {toNode} is {distance}")
 
-// let shortestPath = findShortestPath true valves "AA" "CC"
-// System.Console.WriteLine($"Shortest path from AA to CC is {shortestPath}")
+let shortestPath = findShortestPath verbose valves "AA" "CC"
+System.Console.WriteLine($"Shortest path from AA to CC is {shortestPath}")
 
-// let bfsPaths = findAllPathsBfs true valves "AA" "CC"
-// System.Console.WriteLine($"BFS Paths from AA to CC: {bfsPaths.Length}")
-// bfsPaths |> List.iter System.Console.WriteLine
+let paths = findAllPathsDfs verbose valves "AA" "DD"
 
-// let dfsPaths = findAllPathsDfs true valves "AA" "CC"
-// System.Console.WriteLine($"DFS Paths from AA to CC: {dfsPaths.Length}")
-// dfsPaths |> List.iter System.Console.WriteLine
-
-// let problematic = findAllPathsDfs false valves "AA" "DD"
-
-findAllPathsDfs false valves "AA" "DD"
+System.Console.WriteLine("Paths from AA to DD:")
+paths |> List.iter System.Console.WriteLine

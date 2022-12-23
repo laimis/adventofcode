@@ -79,3 +79,16 @@ let ``find all paths dfs works`` () =
 
     Assert.True(["AA"; "DD"] = allPaths[0])
     Assert.True(["AA";"BB"; "CC"; "DD"] = allPaths[1])
+
+[<Fact>]
+let ``find all paths bfs works`` () =
+
+    let valves = generateValves()
+
+    let allPaths = Program.findAllPathsBfs false valves "AA" "DD"
+
+    Assert.Equal(2, allPaths.Length)
+
+    Assert.True(["AA";"BB"; "CC"; "DD"] = allPaths[0])
+    Assert.True(["AA"; "DD"] = allPaths[1])
+    
