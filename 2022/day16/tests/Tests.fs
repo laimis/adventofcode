@@ -33,9 +33,49 @@ let ``parse with single exit valve``() =
     Assert.Equal(22, valve.rate)
     Assert.True((["GG"] = valve.next))
 
+let generateValves() =
+    Program.Day16.parseValves sampleInput
+
 [<Fact>]
 let ``parse valves works``() =
 
-    let valves = Program.Day16.parseValves sampleInput
+    let valves = generateValves()
 
     Assert.Equal(10, valves.Count)
+
+[<Fact>]
+let ``number of steps works``() =
+    let valves = generateValves()
+
+    let aaToCC = Program.numberOfSteps false valves "AA" "CC"
+
+    Assert.Equal(2, aaToCC.Value)
+
+    let iiTojj = Program.numberOfSteps false valves "II" "JJ"
+
+    Assert.Equal(1, iiTojj.Value)
+
+    let jjTohh = Program.numberOfSteps false valves "JJ" "HH"
+
+    Assert.Equal(7, jjTohh.Value)
+
+[<Fact>]
+let ``find shortest path works`` () =
+
+    let valves = generateValves()
+
+    let shortestPath = Program.findShortestPath false valves "AA" "DD"
+
+    Assert.True(["AA";"DD"] = shortestPath)
+
+[<Fact>]
+let ``find all paths dfs works`` () =
+
+    let valves = generateValves()
+
+    let allPaths = Program.findAllPathsDfs false valves "AA" "DD"
+
+    Assert.Equal(2, allPaths.Length)
+
+    Assert.True(["AA"; "DD"] = allPaths[0])
+    Assert.True(["AA";"BB"; "CC"; "DD"] = allPaths[1])

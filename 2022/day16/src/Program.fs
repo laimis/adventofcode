@@ -45,31 +45,6 @@ Valve JJ has flow rate=21; tunnel leads to valve II"
 
 open Day16
 
-let bfs verbose (tree:Map<string,Valve>) start =
-    
-    let visit (currentNode:string) =
-        if verbose then
-            System.Console.WriteLine(currentNode)
-
-    let queue = new System.Collections.Generic.Queue<string>()
-
-    queue.Enqueue(start)
-
-    let visited = new System.Collections.Generic.HashSet<string>()
-    visited.Add(start) |> ignore
-
-    while queue.Count > 0 do
-        let currentNode = queue.Dequeue()
-
-        visit currentNode
-
-        visited.Add(currentNode) |> ignore
-
-        let valve = tree[currentNode]
-
-        valve.next
-        |> List.filter ( fun n -> visited.Contains(n) |> not)
-        |> List.iter (queue.Enqueue)
 
 let findShortestPath verbose (tree:Map<string,Valve>) start ending =
     
@@ -125,12 +100,15 @@ let findAllPathsDfs verbose (tree:Map<string,Valve>) start ending =
             System.Console.Write($"Exploring {currentPath}...")
 
         if currentNode |> visit then
-            System.Console.WriteLine(" destination found!")
-            System.Console.ReadLine() |> ignore
+            if verbose then
+                System.Console.WriteLine(" destination found!")
+                System.Console.ReadLine() |> ignore
+                
             foundPaths @ [currentPath]
         else
-            System.Console.WriteLine(" destination not found, moving further")
-            System.Console.ReadLine() |> ignore
+            if verbose then
+                System.Console.WriteLine(" destination not found, moving further")
+                System.Console.ReadLine() |> ignore
 
             let valve = tree[currentNode]
             let next = 
@@ -230,20 +208,22 @@ let valves = parseValves lines
 
 let verbose = true
 
-bfs verbose valves "AA"
+// for from in valves.Keys do
+//     for toNode in valves.Keys do
+//         let distance = numberOfSteps false valves from toNode
+//         System.Console.WriteLine($"Distance from {from} to {toNode} is {distance}")
 
-for from in valves.Keys do
-    for toNode in valves.Keys do
-        let distance = numberOfSteps false valves from toNode
-        System.Console.WriteLine($"Distance from {from} to {toNode} is {distance}")
+// let shortestPath = findShortestPath true valves "AA" "CC"
+// System.Console.WriteLine($"Shortest path from AA to CC is {shortestPath}")
 
-let shortestPath = findShortestPath true valves "AA" "CC"
-System.Console.WriteLine($"Shortest path from AA to CC is {shortestPath}")
+// let bfsPaths = findAllPathsBfs true valves "AA" "CC"
+// System.Console.WriteLine($"BFS Paths from AA to CC: {bfsPaths.Length}")
+// bfsPaths |> List.iter System.Console.WriteLine
 
-let bfsPaths = findAllPathsBfs true valves "AA" "CC"
-System.Console.WriteLine($"BFS Paths from AA to CC: {bfsPaths.Length}")
-bfsPaths |> List.iter System.Console.WriteLine
+// let dfsPaths = findAllPathsDfs true valves "AA" "CC"
+// System.Console.WriteLine($"DFS Paths from AA to CC: {dfsPaths.Length}")
+// dfsPaths |> List.iter System.Console.WriteLine
 
-let dfsPaths = findAllPathsDfs true valves "AA" "CC"
-System.Console.WriteLine($"DFS Paths from AA to CC: {dfsPaths.Length}")
-dfsPaths |> List.iter System.Console.WriteLine
+// let problematic = findAllPathsDfs false valves "AA" "DD"
+
+findAllPathsDfs false valves "AA" "DD"
