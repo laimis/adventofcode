@@ -3,7 +3,8 @@
     type Valve = {
         name: string;
         rate: int;
-        next: string list
+        next: string list;
+        isOpen: bool;
     }
 
     type Action = 
@@ -23,7 +24,8 @@
             {
                 rate = int (m.Groups[2].Value);
                 next = m.Groups[3].Value.Split(", ") |> List.ofSeq;
-                name = m.Groups[1].Value
+                name = m.Groups[1].Value;
+                isOpen = false
             }
         with
             | :? System.FormatException -> 
@@ -61,9 +63,7 @@ let outputIfVerboseWithReadLine verbose (message:string) =
 let findAllPathsDfs verbose (tree:Map<string,Valve>) start ending =
     
     let visit (currentNode:string) =
-
         $"checking if {currentNode} is {ending}" |> outputIfVerbose verbose
-        
         currentNode = ending
 
     let rec allPathsRec currentNode currentPath foundPaths =
@@ -155,7 +155,10 @@ let valvesWithPressure (valves:seq<Valve>) =
 
 let pathPressureReleasePotential (valves:Map<string,Valve>) path =
     path
-    |> List.map (fun v -> valves[v].rate)
+    |> List.map (fun v -> 
+        match v.isOpen with
+        | true -> 0
+        | false -> v.rate)
     |> List.sum
 
 let summarize valves start ending =
@@ -177,7 +180,6 @@ let summarize valves start ending =
     availablePaths
         |> List.map(fun p -> pathPressureReleasePotential valves p)
         |> List.iteri(fun i p -> System.Console.WriteLine($"    {availablePaths[i].Length}: {p}"))
-    
 
 let valves = parseValves lines
 
