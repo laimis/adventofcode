@@ -6,6 +6,10 @@
         next: string list
     }
 
+    type Action = 
+        | Move of string
+        | Open of string
+
     // "Valve AA has flow rate=0; tunnels lead to valves DD, II, BB"
     let parseValve (line:string) =
         try
@@ -45,30 +49,34 @@ Valve JJ has flow rate=21; tunnel leads to valve II"
 
 open Day16
 
+let outputIfVerbose verbose (message:string) =
+    if verbose then
+        System.Console.WriteLine(message)
+
+let outputIfVerboseWithReadLine verbose (message:string) =
+    if verbose then
+        System.Console.WriteLine(message)
+        System.Console.ReadLine() |> ignore
 
 let findAllPathsDfs verbose (tree:Map<string,Valve>) start ending =
     
     let visit (currentNode:string) =
 
-        if verbose then
-            System.Console.WriteLine($"checking if {currentNode} is {ending}")
+        $"checking if {currentNode} is {ending}" |> outputIfVerbose verbose
         
         currentNode = ending
 
     let rec allPathsRec currentNode currentPath foundPaths =
-        if verbose then
-            System.Console.Write($"Exploring {currentPath}...")
+        
+        $"Exploring {currentPath}..." |> outputIfVerbose verbose
 
         if currentNode |> visit then
-            if verbose then
-                System.Console.WriteLine(" destination found!")
-                System.Console.ReadLine() |> ignore
+            " destination found!" |> outputIfVerboseWithReadLine verbose
 
             foundPaths @ [currentPath]
         else
             if verbose then
-                System.Console.WriteLine(" destination not found, moving further")
-                System.Console.ReadLine() |> ignore
+                " destination not found, moving further" |> outputIfVerboseWithReadLine verbose
 
             let valve = tree[currentNode]
             let next = 
@@ -91,8 +99,7 @@ let findAllPathsBfs verbose (tree:Map<string,Valve>) start ending =
     
     let visit (currentNode:string) =
 
-        if verbose then
-            System.Console.WriteLine($"checking if {currentNode} is {ending}")
+        $"checking if {currentNode} is {ending}" |> outputIfVerbose verbose
         
         currentNode = ending
 
@@ -102,27 +109,20 @@ let findAllPathsBfs verbose (tree:Map<string,Valve>) start ending =
 
     let rec allPathsRec foundPaths =
         if queue.Count = 0 then
-            if verbose then
-                System.Console.WriteLine("Reached the end of queue")
-                System.Console.ReadLine() |> ignore
+            "Reached the end of queue" |> outputIfVerboseWithReadLine verbose
             foundPaths
         else
             let currentPath = queue.Dequeue()
             let currentNode = currentPath |> List.last
 
-            if verbose then
-                System.Console.Write($"Exploring {currentPath}...")
+            $"Exploring {currentPath}..." |> outputIfVerbose verbose
 
             if currentNode |> visit then
-                if verbose then
-                    System.Console.WriteLine(" destination found!")
-                    System.Console.ReadLine() |> ignore
+                " destination found!" |> outputIfVerboseWithReadLine verbose
 
                 allPathsRec foundPaths @ [currentPath]
             else
-                if verbose then
-                    System.Console.WriteLine(" destination not found, moving further")
-                    System.Console.ReadLine() |> ignore
+                " destination not found, moving further" |> outputIfVerboseWithReadLine verbose
 
                 let valve = tree[currentNode]
                 valve.next
@@ -138,17 +138,14 @@ let findAllPathsBfs verbose (tree:Map<string,Valve>) start ending =
 
 let findShortestPath verbose (tree:Map<string,Valve>) start ending =
     
-    let paths = findAllPathsBfs verbose tree start ending
-    
-    paths
+    findAllPathsBfs verbose tree start ending
     |> List.sortBy (fun p -> p.Length)
     |> List.head
 
 let numberOfSteps verbose (tree:Map<string,Valve>) start ending =
     
-    let shortest = findShortestPath verbose tree start ending
-
-    Some (shortest.Length - 1)
+    (findShortestPath verbose tree start ending |> List.length) - 1
+    |> Some
 
 let valvesWithPressure (valves:seq<Valve>) =
     valves
