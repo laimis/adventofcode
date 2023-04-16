@@ -155,7 +155,8 @@ let valvesWithPressure (valves:seq<Valve>) =
 
 let pathPressureReleasePotential (valves:Map<string,Valve>) path =
     path
-    |> List.map (fun v -> 
+    |> List.map (fun name -> 
+        let v = valves[name]
         match v.isOpen with
         | true -> 0
         | false -> v.rate)
